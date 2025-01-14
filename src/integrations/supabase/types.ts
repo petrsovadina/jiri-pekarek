@@ -9,7 +9,112 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      files: {
+        Row: {
+          columns: Json | null
+          created_at: string
+          data: Json | null
+          id: string
+          mime_type: string
+          name: string
+          original_name: string
+          size: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          columns?: Json | null
+          created_at?: string
+          data?: Json | null
+          id?: string
+          mime_type: string
+          name: string
+          original_name: string
+          size: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          columns?: Json | null
+          created_at?: string
+          data?: Json | null
+          id?: string
+          mime_type?: string
+          name?: string
+          original_name?: string
+          size?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "files_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          anthropic_api_key: string | null
+          created_at: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          anthropic_api_key?: string | null
+          created_at?: string
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          anthropic_api_key?: string | null
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      prompts: {
+        Row: {
+          content: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prompts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
