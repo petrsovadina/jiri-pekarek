@@ -2,14 +2,53 @@ import { useState, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Upload } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface FileUploadProps {
   onFileUpload: (file: File) => void;
   isLoading?: boolean;
+  acceptedFileTypes?: string[];
+  maxSizeInMB?: number;
 }
 
-export const FileUpload = ({ onFileUpload, isLoading = false }: FileUploadProps) => {
+export const FileUpload = ({ 
+  onFileUpload, 
+  isLoading = false,
+  acceptedFileTypes = [".csv", ".xlsx"],
+  maxSizeInMB = 10
+}: FileUploadProps) => {
   const [dragActive, setDragActive] = useState(false);
+  const { toast } = useToast();
+  
+  const validateFile = useCallback((file: File): boolean => {
+    // Kontrola typu souboru
+    const fileType = file.name.toLowerCase().split('.').pop();
+    const isValidType = acceptedFileTypes.some(type => 
+      type.toLowerCase().includes(fileType || '')
+    );
+    
+    if (!isValidType) {
+      toast({
+        title: "Nepodporovaný formát",
+        description: `Podporované formáty jsou: ${acceptedFileTypes.join(', ')}`,
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    // Kontrola velikosti souboru
+    const maxSizeInBytes = maxSizeInMB * 1024 * 1024;
+    if (file.size > maxSizeInBytes) {
+      toast({
+        title: "Soubor je příliš velký",
+        description: `Maximální velikost souboru je ${maxSizeInMB}MB`,
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    return true;
+  }, [acceptedFileTypes, maxSizeInMB, toast]);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -28,21 +67,21 @@ export const FileUpload = ({ onFileUpload, isLoading = false }: FileUploadProps)
       setDragActive(false);
 
       const file = e.dataTransfer.files?.[0];
-      if (file && (file.type === "text/csv" || file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) {
+      if (file && validateFile(file)) {
         onFileUpload(file);
       }
     },
-    [onFileUpload]
+    [onFileUpload, validateFile]
   );
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
-      if (file) {
+      if (file && validateFile(file)) {
         onFileUpload(file);
       }
     },
-    [onFileUpload]
+    [onFileUpload, validateFile]
   );
 
   return (
@@ -65,7 +104,10 @@ export const FileUpload = ({ onFileUpload, isLoading = false }: FileUploadProps)
             Přetáhněte sem soubor nebo klikněte pro výběr
           </p>
           <p className="text-xs text-muted-foreground">
-            Podporované formáty: CSV, XLSX
+            Podporované formáty: {acceptedFileTypes.join(', ')}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Maximální velikost: {maxSizeInMB}MB
           </p>
         </div>
         <label className="relative">
@@ -73,10 +115,10 @@ export const FileUpload = ({ onFileUpload, isLoading = false }: FileUploadProps)
             type="file"
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
             onChange={handleChange}
-            accept=".csv,.xlsx"
+            accept={acceptedFileTypes.join(',')}
             disabled={isLoading}
           />
-          <Button disabled={isLoading}>
+          <Button disabled={isLoading} variant="secondary">
             {isLoading ? "Nahrávání..." : "Vybrat soubor"}
           </Button>
         </label>
