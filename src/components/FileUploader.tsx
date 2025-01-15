@@ -23,6 +23,13 @@ export const FileUploader = () => {
     setUploadProgress(0);
 
     try {
+      // Get current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        throw new Error("Pro nahrání souboru musíte být přihlášeni");
+      }
+
       // Validate file type
       if (!file.name.match(/\.(csv|xlsx)$/i)) {
         throw new Error("Prosím nahrajte soubor typu CSV nebo XLSX");
@@ -45,6 +52,7 @@ export const FileUploader = () => {
               mime_type: file.type,
               size: file.size,
               status: "pending",
+              user_id: user.id
             })
             .select()
             .single();
