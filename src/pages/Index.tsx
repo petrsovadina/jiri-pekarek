@@ -1,33 +1,82 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FileUpload } from "@/components/FileUpload";
 import { TablePreview } from "@/components/TablePreview";
 import { PromptEditor } from "@/components/PromptEditor";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
   const [headers, setHeaders] = useState<string[]>([]);
   const [data, setData] = useState<string[][]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
+
+  // Check authentication status
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate("/auth");
+      }
+    };
+    checkAuth();
+  }, [navigate]);
 
   const handleFileUpload = async (file: File) => {
-    setSelectedFile(file);
-    // For demo purposes, we'll just show a success message
-    // In a real app, we would parse the file here
-    toast({
-      title: "File uploaded successfully",
-      description: "Your file is ready for processing",
-    });
-    
-    // Demo data
-    setHeaders(["Name", "Email", "Company", "Position"]);
-    setData([
-      ["John Doe", "john@example.com", "Acme Inc", "Developer"],
-      ["Jane Smith", "jane@example.com", "Tech Corp", "Designer"],
-      ["Bob Johnson", "bob@example.com", "Big Co", "Manager"],
-    ]);
+    setIsLoading(true);
+    try {
+      setSelectedFile(file);
+      
+      // Read file content
+      const text = await file.text();
+      const rows = text.split('\n');
+      
+      // Parse CSV (simple implementation - can be enhanced for more robust parsing)
+      const parsedHeaders = rows[0].split(',').map(h => h.trim());
+      const parsedData = rows.slice(1)
+        .filter(row => row.trim()) // Remove empty rows
+        .map(row => row.split(',').map(cell => cell.trim()));
+
+      setHeaders(parsedHeaders);
+      setData(parsedData);
+
+      // Save to Supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      const { error } = await supabase
+        .from('files')
+        .insert({
+          name: file.name,
+          original_name: file.name,
+          mime_type: file.type,
+          size: file.size,
+          columns: parsedHeaders,
+          data: parsedData,
+          user_id: user.id
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Soubor byl úspěšně nahrán",
+        description: "Vaše data jsou připravena ke zpracování",
+      });
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      toast({
+        title: "Chyba při nahrávání souboru",
+        description: error instanceof Error ? error.message : "Nastala neočekávaná chyba",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleHeaderEdit = (oldHeader: string, newHeader: string) => {
@@ -35,8 +84,9 @@ const Index = () => {
   };
 
   const handleHeaderDelete = (header: string) => {
+    const headerIndex = headers.indexOf(header);
     setHeaders(headers.filter(h => h !== header));
-    setData(data.map(row => row.filter((_, i) => headers[i] !== header)));
+    setData(data.map(row => row.filter((_, i) => i !== headerIndex)));
   };
 
   const handleHeaderAdd = (header: string) => {
@@ -44,34 +94,56 @@ const Index = () => {
     setData(data.map(row => [...row, ""]));
   };
 
-  const handlePromptSave = (prompt: string) => {
-    toast({
-      title: "Prompt saved",
-      description: "Your prompt has been saved successfully",
-    });
+  const handlePromptSave = async (prompt: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      const { error } = await supabase
+        .from('prompts')
+        .insert({
+          name: 'New Prompt',
+          content: prompt,
+          user_id: user.id
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Prompt byl uložen",
+        description: "Váš prompt byl úspěšně uložen",
+      });
+    } catch (error) {
+      console.error('Error saving prompt:', error);
+      toast({
+        title: "Chyba při ukládání promptu",
+        description: error instanceof Error ? error.message : "Nastala neočekávaná chyba",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
     <div className="min-h-screen bg-background">
       <div className="container py-8 space-y-8 animate-fade-in">
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">Table Data Processor</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Zpracování tabulkových dat</h1>
           <p className="text-muted-foreground">
-            Upload your table, manage columns, and generate data with AI
+            Nahrajte tabulku, upravte strukturu a generujte data pomocí AI
           </p>
         </div>
 
         {!selectedFile ? (
-          <FileUpload onFileUpload={handleFileUpload} />
+          <FileUpload onFileUpload={handleFileUpload} isLoading={isLoading} />
         ) : (
           <div className="space-y-8 animate-slide-up">
             <Card className="p-6">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-xl font-semibold">Table Preview</h2>
+                    <h2 className="text-xl font-semibold">Náhled tabulky</h2>
                     <p className="text-sm text-muted-foreground">
-                      Showing first 10 rows of your data
+                      Zobrazuji prvních 10 řádků vašich dat
                     </p>
                   </div>
                   <Button
@@ -82,7 +154,7 @@ const Index = () => {
                       setData([]);
                     }}
                   >
-                    Upload New File
+                    Nahrát nový soubor
                   </Button>
                 </div>
                 <TablePreview
