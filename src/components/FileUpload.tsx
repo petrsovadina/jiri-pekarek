@@ -4,7 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Upload, FileType } from 'lucide-react';
 
-export const FileUpload = ({ onFileUpload }: { onFileUpload: (file: File) => void }) => {
+export const FileUpload = ({ 
+  onFileUpload,
+  isLoading = false 
+}: { 
+  onFileUpload: (file: File) => void;
+  isLoading?: boolean;
+}) => {
   const [isDragging, setIsDragging] = useState(false);
   const { toast } = useToast();
 
@@ -70,9 +76,10 @@ export const FileUpload = ({ onFileUpload }: { onFileUpload: (file: File) => voi
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
+            disabled={isLoading}
             onClick={() => document.getElementById('file-upload')?.click()}
           >
-            Select File
+            {isLoading ? 'Uploading...' : 'Select File'}
           </Button>
           <FileType className="w-4 h-4 text-muted-foreground" />
           <span className="text-sm text-muted-foreground">CSV, XLSX</span>
@@ -83,6 +90,7 @@ export const FileUpload = ({ onFileUpload }: { onFileUpload: (file: File) => voi
           className="hidden"
           accept=".csv,.xlsx"
           onChange={handleFileSelect}
+          disabled={isLoading}
         />
       </div>
     </Card>
