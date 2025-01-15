@@ -14,11 +14,13 @@ export type Database = {
           columns: Json | null
           created_at: string
           data: Json | null
+          error_message: string | null
           id: string
           mime_type: string
           name: string
           original_name: string
           size: number
+          status: string
           updated_at: string
           user_id: string
         }
@@ -26,11 +28,13 @@ export type Database = {
           columns?: Json | null
           created_at?: string
           data?: Json | null
+          error_message?: string | null
           id?: string
           mime_type: string
           name: string
           original_name: string
           size: number
+          status?: string
           updated_at?: string
           user_id: string
         }
@@ -38,11 +42,13 @@ export type Database = {
           columns?: Json | null
           created_at?: string
           data?: Json | null
+          error_message?: string | null
           id?: string
           mime_type?: string
           name?: string
           original_name?: string
           size?: number
+          status?: string
           updated_at?: string
           user_id?: string
         }
