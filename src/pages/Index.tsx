@@ -6,17 +6,19 @@ import { TablePreview } from "@/components/TablePreview";
 import { Button } from "@/components/ui/button";
 import { LogOut, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useToast } from "@/components/ui/use-toast";
 
 interface FileData {
   id: string;
   name: string;
-  data: any[];
+  data: string[][];
   columns: string[];
 }
 
 const Index = () => {
   const navigate = useNavigate();
   const [activeFile, setActiveFile] = useState<FileData | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     const checkUser = async () => {
@@ -41,7 +43,13 @@ const Index = () => {
       }
 
       if (files && files.length > 0) {
-        setActiveFile(files[0]);
+        const file = files[0];
+        setActiveFile({
+          id: file.id,
+          name: file.name,
+          data: file.data as string[][] || [],
+          columns: file.columns as string[] || []
+        });
       }
     };
 
@@ -53,8 +61,31 @@ const Index = () => {
     navigate("/auth");
   };
 
-  const handleFileUploaded = (fileData: FileData) => {
-    setActiveFile(fileData);
+  const handleHeaderEdit = (oldHeader: string, newHeader: string) => {
+    if (!activeFile) return;
+    // TODO: Implementovat editaci hlavičky
+    toast({
+      title: "Editace hlavičky",
+      description: `Změna z "${oldHeader}" na "${newHeader}"`,
+    });
+  };
+
+  const handleHeaderDelete = (header: string) => {
+    if (!activeFile) return;
+    // TODO: Implementovat smazání hlavičky
+    toast({
+      title: "Smazání hlavičky",
+      description: `Smazána hlavička "${header}"`,
+    });
+  };
+
+  const handleHeaderAdd = (header: string) => {
+    if (!activeFile) return;
+    // TODO: Implementovat přidání hlavičky
+    toast({
+      title: "Přidání hlavičky",
+      description: `Přidána hlavička "${header}"`,
+    });
   };
 
   return (
@@ -83,7 +114,7 @@ const Index = () => {
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
                 Nahrát nový soubor
               </h2>
-              <FileUploader onUploadComplete={handleFileUploaded} />
+              <FileUploader />
             </div>
           </section>
 
@@ -94,8 +125,11 @@ const Index = () => {
               </h2>
               {activeFile ? (
                 <TablePreview 
-                  data={activeFile.data} 
-                  columns={activeFile.columns}
+                  headers={activeFile.columns}
+                  data={activeFile.data}
+                  onHeaderEdit={handleHeaderEdit}
+                  onHeaderDelete={handleHeaderDelete}
+                  onHeaderAdd={handleHeaderAdd}
                 />
               ) : (
                 <p className="text-gray-500">

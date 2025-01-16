@@ -116,7 +116,7 @@ export const TablePreview = ({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.slice(0, 10).map((row, i) => (
+            {data.map((row, i) => (
               <TableRow key={i}>
                 {row.map((cell, j) => (
                   <TableCell key={`${i}-${j}`}>{cell}</TableCell>
