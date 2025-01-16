@@ -47,7 +47,7 @@ export const FileUploader = () => {
               size: file.size,
               columns: columns,
               data: parsedData,
-              status: 'processed',
+              status: 'pending',
               user_id: userId
             })
             .select()
