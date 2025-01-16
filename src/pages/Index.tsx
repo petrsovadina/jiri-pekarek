@@ -1,27 +1,60 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { FileUploader } from "@/components/FileUploader";
+import { TablePreview } from "@/components/TablePreview";
 import { Button } from "@/components/ui/button";
 import { LogOut, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
 
+interface FileData {
+  id: string;
+  name: string;
+  data: any[];
+  columns: string[];
+}
+
 const Index = () => {
   const navigate = useNavigate();
+  const [activeFile, setActiveFile] = useState<FileData | null>(null);
 
   useEffect(() => {
-    const checkAuth = async () => {
+    const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         navigate("/auth");
       }
     };
-    checkAuth();
+    checkUser();
+
+    // Načtení posledního nahraného souboru
+    const fetchLatestFile = async () => {
+      const { data: files, error } = await supabase
+        .from('files')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (error) {
+        console.error('Chyba při načítání souboru:', error);
+        return;
+      }
+
+      if (files && files.length > 0) {
+        setActiveFile(files[0]);
+      }
+    };
+
+    fetchLatestFile();
   }, [navigate]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate("/auth");
+  };
+
+  const handleFileUploaded = (fileData: FileData) => {
+    setActiveFile(fileData);
   };
 
   return (
@@ -50,7 +83,7 @@ const Index = () => {
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
                 Nahrát nový soubor
               </h2>
-              <FileUploader />
+              <FileUploader onUploadComplete={handleFileUploaded} />
             </div>
           </section>
 
@@ -59,9 +92,16 @@ const Index = () => {
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
                 Náhled dat
               </h2>
-              <p className="text-gray-500">
-                Nahrajte soubor pro zobrazení náhledu dat
-              </p>
+              {activeFile ? (
+                <TablePreview 
+                  data={activeFile.data} 
+                  columns={activeFile.columns}
+                />
+              ) : (
+                <p className="text-gray-500">
+                  Nahrajte soubor pro zobrazení náhledu dat
+                </p>
+              )}
             </div>
           </section>
 
@@ -70,9 +110,18 @@ const Index = () => {
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
                 Generování pomocí AI
               </h2>
-              <p className="text-gray-500">
-                Nejdříve vyberte sloupec a zadejte prompt pro generování
-              </p>
+              {activeFile ? (
+                <div className="space-y-4">
+                  <p className="text-gray-700">
+                    Vyberte sloupec a zadejte prompt pro generování nových dat
+                  </p>
+                  {/* Zde přidáme výběr sloupce a prompt editor v dalším kroku */}
+                </div>
+              ) : (
+                <p className="text-gray-500">
+                  Nejdříve nahrajte soubor pro možnost generování
+                </p>
+              )}
             </div>
           </section>
         </div>
