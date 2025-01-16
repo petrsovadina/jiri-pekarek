@@ -15,7 +15,7 @@ export const FileUploader = () => {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const processFile = async (file: File) => {
+  const processFile = async (file: File, userId: string) => {
     try {
       const reader = new FileReader();
       
@@ -47,7 +47,8 @@ export const FileUploader = () => {
               size: file.size,
               columns: columns,
               data: parsedData,
-              status: 'processed'
+              status: 'processed',
+              user_id: userId
             })
             .select()
             .single();
@@ -114,7 +115,7 @@ export const FileUploader = () => {
         throw new Error("Soubor je příliš velký. Maximální velikost je 10MB");
       }
 
-      await processFile(file);
+      await processFile(file, user.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Nastala neočekávaná chyba");
       toast({
