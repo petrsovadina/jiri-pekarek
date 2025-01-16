@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { FileUploader } from "@/components/FileUploader";
 import { TablePreview } from "@/components/TablePreview";
+import { PromptEditor } from "@/components/PromptEditor";
 import { Button } from "@/components/ui/button";
 import { LogOut, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -22,23 +23,22 @@ const Index = () => {
 
   useEffect(() => {
     const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
         navigate("/auth");
       }
     };
     checkUser();
 
-    // Načtení posledního nahraného souboru
-    const fetchLatestFile = async () => {
+    const fetchFiles = async () => {
       const { data: files, error } = await supabase
-        .from('files')
-        .select('*')
-        .order('created_at', { ascending: false })
+        .from("files")
+        .select("*")
+        .order("created_at", { ascending: false })
         .limit(1);
 
       if (error) {
-        console.error('Chyba při načítání souboru:', error);
+        console.error("Error fetching files:", error);
         return;
       }
 
@@ -53,10 +53,10 @@ const Index = () => {
       }
     };
 
-    fetchLatestFile();
+    fetchFiles();
   }, [navigate]);
 
-  const handleLogout = async () => {
+  const handleSignOut = async () => {
     await supabase.auth.signOut();
     navigate("/auth");
   };
@@ -88,29 +88,56 @@ const Index = () => {
     });
   };
 
+  const handlePromptSave = async (prompt: string) => {
+    if (!activeFile) return;
+    
+    const { error } = await supabase
+      .from("prompts")
+      .insert({
+        name: "Nový prompt",
+        content: prompt,
+        description: "Automaticky vytvořený prompt"
+      });
+
+    if (error) {
+      toast({
+        title: "Chyba při ukládání promptu",
+        description: error.message,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    toast({
+      title: "Prompt uložen",
+      description: "Prompt byl úspěšně uložen pro pozdější použití"
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">DataCraft AI</h1>
-          <div className="flex items-center gap-4">
-            <Link to="/settings">
-              <Button variant="ghost" size="icon">
-                <Settings className="h-4 w-4" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex justify-between items-center">
+            <h1 className="text-2xl font-bold text-gray-900">DataCraft AI</h1>
+            <div className="flex items-center gap-4">
+              <Link to="/settings">
+                <Button variant="ghost" size="icon">
+                  <Settings className="h-5 w-5" />
+                </Button>
+              </Link>
+              <Button variant="ghost" size="icon" onClick={handleSignOut}>
+                <LogOut className="h-5 w-5" />
               </Button>
-            </Link>
-            <Button variant="ghost" onClick={handleLogout}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Odhlásit se
-            </Button>
+            </div>
           </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid gap-8">
+        <div className="space-y-8">
           <section>
-            <div className="bg-white rounded-lg shadow p-6">
+            <div className="bg-white shadow rounded-lg p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
                 Nahrát nový soubor
               </h2>
@@ -119,7 +146,7 @@ const Index = () => {
           </section>
 
           <section>
-            <div className="bg-white rounded-lg shadow p-6">
+            <div className="bg-white shadow rounded-lg p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
                 Náhled dat
               </h2>
@@ -133,27 +160,22 @@ const Index = () => {
                 />
               ) : (
                 <p className="text-gray-500">
-                  Nahrajte soubor pro zobrazení náhledu dat
+                  Nahrajte soubor pro zobrazení dat
                 </p>
               )}
             </div>
           </section>
 
           <section>
-            <div className="bg-white rounded-lg shadow p-6">
+            <div className="bg-white shadow rounded-lg p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
                 Generování pomocí AI
               </h2>
               {activeFile ? (
-                <div className="space-y-4">
-                  <p className="text-gray-700">
-                    Vyberte sloupec a zadejte prompt pro generování nových dat
-                  </p>
-                  {/* Zde přidáme výběr sloupce a prompt editor v dalším kroku */}
-                </div>
+                <PromptEditor onSave={handlePromptSave} />
               ) : (
                 <p className="text-gray-500">
-                  Nejdříve nahrajte soubor pro možnost generování
+                  Nahrajte soubor pro použití AI generování
                 </p>
               )}
             </div>
