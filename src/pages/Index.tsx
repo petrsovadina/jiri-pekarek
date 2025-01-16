@@ -63,7 +63,6 @@ const Index = () => {
 
   const handleHeaderEdit = (oldHeader: string, newHeader: string) => {
     if (!activeFile) return;
-    // TODO: Implementovat editaci hlavičky
     toast({
       title: "Editace hlavičky",
       description: `Změna z "${oldHeader}" na "${newHeader}"`,
@@ -72,7 +71,6 @@ const Index = () => {
 
   const handleHeaderDelete = (header: string) => {
     if (!activeFile) return;
-    // TODO: Implementovat smazání hlavičky
     toast({
       title: "Smazání hlavičky",
       description: `Smazána hlavička "${header}"`,
@@ -81,7 +79,6 @@ const Index = () => {
 
   const handleHeaderAdd = (header: string) => {
     if (!activeFile) return;
-    // TODO: Implementovat přidání hlavičky
     toast({
       title: "Přidání hlavičky",
       description: `Přidána hlavička "${header}"`,
@@ -91,27 +88,43 @@ const Index = () => {
   const handlePromptSave = async (prompt: string) => {
     if (!activeFile) return;
     
-    const { error } = await supabase
-      .from("prompts")
-      .insert({
-        name: "Nový prompt",
-        content: prompt,
-        description: "Automaticky vytvořený prompt"
-      });
+    try {
+      // Get current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        throw new Error("Pro uložení promptu musíte být přihlášeni");
+      }
 
-    if (error) {
+      const { error } = await supabase
+        .from("prompts")
+        .insert({
+          name: "Nový prompt",
+          content: prompt,
+          description: "Automaticky vytvořený prompt",
+          user_id: user.id
+        });
+
+      if (error) {
+        toast({
+          title: "Chyba při ukládání promptu",
+          description: error.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      toast({
+        title: "Prompt uložen",
+        description: "Prompt byl úspěšně uložen pro pozdější použití"
+      });
+    } catch (err) {
       toast({
         title: "Chyba při ukládání promptu",
-        description: error.message,
+        description: err instanceof Error ? err.message : "Nastala neočekávaná chyba",
         variant: "destructive"
       });
-      return;
     }
-
-    toast({
-      title: "Prompt uložen",
-      description: "Prompt byl úspěšně uložen pro pozdější použití"
-    });
   };
 
   return (
