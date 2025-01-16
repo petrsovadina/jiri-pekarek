@@ -7,12 +7,86 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import * as XLSX from 'xlsx';
 
 export const FileUploader = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+
+  const processFile = async (file: File) => {
+    try {
+      const reader = new FileReader();
+      
+      reader.onload = async (e) => {
+        try {
+          const data = e.target?.result;
+          let parsedData;
+          let columns;
+          
+          if (file.name.endsWith('.csv')) {
+            const text = data as string;
+            const rows = text.split('\n').map(row => row.split(','));
+            columns = rows[0];
+            parsedData = rows.slice(1);
+          } else if (file.name.endsWith('.xlsx')) {
+            const workbook = XLSX.read(data, { type: 'binary' });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+            columns = jsonData[0];
+            parsedData = jsonData.slice(1);
+          }
+
+          const { data: fileData, error: fileError } = await supabase
+            .from('files')
+            .insert({
+              name: file.name,
+              original_name: file.name,
+              mime_type: file.type,
+              size: file.size,
+              columns: columns,
+              data: parsedData,
+              status: 'processed'
+            })
+            .select()
+            .single();
+
+          if (fileError) throw fileError;
+
+          toast({
+            title: "Soubor byl úspěšně nahrán",
+            description: "Data byla zpracována a uložena",
+          });
+
+          setUploadProgress(100);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "Nastala neočekávaná chyba");
+          toast({
+            variant: "destructive",
+            title: "Chyba při zpracování",
+            description: err instanceof Error ? err.message : "Nastala neočekávaná chyba",
+          });
+        }
+      };
+
+      reader.onprogress = (event) => {
+        if (event.lengthComputable) {
+          setUploadProgress((event.loaded / event.total) * 100);
+        }
+      };
+
+      if (file.name.endsWith('.csv')) {
+        reader.readAsText(file);
+      } else {
+        reader.readAsBinaryString(file);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Nastala neočekávaná chyba");
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return;
@@ -40,56 +114,14 @@ export const FileUploader = () => {
         throw new Error("Soubor je příliš velký. Maximální velikost je 10MB");
       }
 
-      // Read file content
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        try {
-          const { data, error } = await supabase
-            .from("files")
-            .insert({
-              name: file.name,
-              original_name: file.name,
-              mime_type: file.type,
-              size: file.size,
-              status: "pending",
-              user_id: user.id
-            })
-            .select()
-            .single();
-
-          if (error) throw error;
-
-          toast({
-            title: "Soubor byl úspěšně nahrán",
-            description: "Zpracování souboru bylo zahájeno",
-          });
-
-          setUploadProgress(100);
-        } catch (err) {
-          setError(err instanceof Error ? err.message : "Nastala neočekávaná chyba");
-          toast({
-            variant: "destructive",
-            title: "Chyba při nahrávání",
-            description: err instanceof Error ? err.message : "Nastala neočekávaná chyba",
-          });
-        }
-      };
-
-      reader.onerror = () => {
-        setError("Chyba při čtení souboru");
-      };
-
-      reader.onprogress = (event) => {
-        if (event.lengthComputable) {
-          setUploadProgress((event.loaded / event.total) * 100);
-        }
-      };
-
-      reader.readAsArrayBuffer(file);
+      await processFile(file);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Nastala neočekávaná chyba");
-    } finally {
-      setIsUploading(false);
+      toast({
+        variant: "destructive",
+        title: "Chyba při nahrávání",
+        description: err instanceof Error ? err.message : "Nastala neočekávaná chyba",
+      });
     }
   }, [toast]);
 
