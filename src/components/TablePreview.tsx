@@ -20,6 +20,7 @@ export const TablePreview = ({
   onHeaderDelete,
   onHeaderAdd,
 }: TablePreviewProps) => {
+  console.log("TablePreview props:", { headers, data });
   const [editingHeader, setEditingHeader] = useState<string | null>(null);
   const [newHeaderValue, setNewHeaderValue] = useState("");
   const [isAddingHeader, setIsAddingHeader] = useState(false);

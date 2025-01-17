@@ -67,9 +67,16 @@ const Settings = () => {
   }, [navigate, form, toast]);
 
   const onSubmit = async (values: FormValues) => {
+    const key = process.env.ENCRYPTION_KEY || 'default-encryption-key';
+    const iv = crypto.getRandomValues(new Uint8Array(16));
+    const cipher = crypto.createCipheriv('aes-256-cbc', key, Buffer.from(iv.buffer));
+    let encrypted = cipher.update(values.anthropic_api_key, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    const encryptedApiKey = `${iv.toString('hex')}:${encrypted}`;
+
     const { error } = await supabase
       .from("profiles")
-      .update({ anthropic_api_key: values.anthropic_api_key })
+      .update({ anthropic_api_key: encryptedApiKey })
       .eq("id", (await supabase.auth.getUser()).data.user?.id);
 
     if (error) {
