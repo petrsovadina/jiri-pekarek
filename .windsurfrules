@@ -1,0 +1,106 @@
+Vyvíjíme webovou aplikaci, která umožní uživatelům nahrávat tabulky, upravovat jejich strukturu, generovat hodnoty do vybraných sloupců pomocí AI modelu Anthropic Claude, spravovat prompty a exportovat výsledné tabulky. Aplikace musí být uživatelsky přívětivá, rychlá a schopná pracovat s velkými objemy dat.
+
+---
+
+#### **2. Obecné pokyny**
+- **Modularita kódu:** Kód musí být modulární a snadno rozšiřitelný. Každá funkce nebo modul by měl být samostatný, aby bylo možné aplikaci snadno škálovat.
+- **Čitelnost:** Dodržujte čistý a čitelný kód. Komentujte klíčové části kódu a logiku.
+- **Performance:** Optimalizujte dávkové zpracování pro tisíce řádků s ohledem na limity API (tokeny, rychlost požadavků).
+- **Bezpečnost:** Zajistěte šifrování citlivých dat (API klíče, uživatelská data) a používejte HTTPS.
+- **Testování:** Každá klíčová funkce by měla být otestována (unit testy a integrace).
+
+---
+
+#### **3. Technologie a nástroje**
+- **Frontend:**
+  - Framework: **Next.js** (verze 13+).
+  - Stylování: **Shadcn/UI** komponenty pro moderní a intuitivní design.
+  - Stavová správa: **React Context** nebo jiný stavový management dle potřeby.
+- **Backend a databáze:**
+  - **Supabase:** Lehký backend a databázové řešení pro ukládání tabulek, promptů, uživatelských dat a konfigurací.
+  - **API endpointy:** Implementované pomocí integrovaného serveru v Next.js.
+- **AI integrace:**
+  - Model: **Anthropic Claude** (API verze dle aktuální dostupnosti).
+  - Kontext promptu: Používejte ostatní sloupce daného řádku jako vstupní data.
+
+---
+
+#### **4. Styl kódování**
+
+##### **Frontend (Next.js):**
+- **Struktura složek:**
+  - `/components`: Pro opakovaně použitelné UI komponenty.
+  - `/pages`: Stránky aplikace (Next.js).
+  - `/api`: API endpointy (pro zpracování a komunikaci s backendem).
+  - `/styles`: Globální a specifické styly.
+- **Konvence pojmenování:**
+  - Komponenty: PascalCase (`TableUploader.jsx`, `PromptManager.jsx`).
+  - Soubory: kebab-case (`user-settings.js`, `table-manager.js`).
+- **Odsazení:** 2 mezery.
+- **Typy:** Používejte TypeScript pro typovou bezpečnost.
+- **Styly:** Používejte Shadcn/UI komponenty, kombinované s TailwindCSS, kde je potřeba.
+- **Logika:** Stav a logiku spravujte pomocí React Context nebo vlastních hooků.
+
+##### **Backend (Supabase + Next.js API):**
+- **Struktura endpointů:**
+  - `/api/upload-table`: Pro nahrání a validaci tabulek.
+  - `/api/generate-data`: Pro komunikaci s Anthropic API a generování hodnot.
+  - `/api/manage-prompts`: Pro správu promptů (uložení, editace, mazání).
+- **Konvence pojmenování:**
+  - Funkce a proměnné: camelCase (`generateRowContext`, `savePromptToDatabase`).
+  - Datové modely: PascalCase (`User`, `Prompt`, `TableRow`).
+- **Validace:** Používejte `zod` nebo jiný validátor pro zpracování vstupů.
+
+##### **AI Integrace (Anthropic Claude):**
+- **Kontext pro prompty:**
+  - Pro každý řádek použijte data z vyplněných sloupců jako kontext.
+  - Prompt by měl být dynamický, aby odpovídal vybranému sloupci a datům.
+  - Např.: „Vytvoř popis hotelu na základě názvu hotelu, destinace a dostupných služeb.“
+- **Dávkové zpracování:**
+  - Limitujte požadavky na API dle jeho kapacity (počet tokenů na požadavek).
+  - Implementujte vizualizaci stavu zpracování (procentuální dokončení).
+
+---
+
+#### **5. Ukládání dat v Supabase**
+- **Kolekce:**
+  - `Users`: Pro uživatelské účty (e-mail, heslo, API klíč).
+  - `Tables`: Pro metadata tabulek (název, uživatel, čas nahrání).
+  - `Prompts`: Pro uložené prompty (název, obsah, uživatel).
+- **Datové struktury:**
+  - `Tables`: Pole obsahující původní i generovaná data.
+  - `Prompts`: Pole obsahující zadané a uložené prompty.
+- **Bezpečnost:** Všechny API klíče ukládat šifrovaně.
+
+---
+
+#### **6. Klíčové funkce**
+
+1. **Přihlášení a správa uživatelů:**
+   - Registrace/přihlášení pomocí e-mailu a hesla.
+   - Zadání API klíče Anthropic Claude.
+   - Šifrované uložení klíče v databázi.
+
+2. **Nahrávání a správa tabulek:**
+   - Nahrávání tabulek (CSV/Excel).
+   - Náhled a úprava struktury tabulek (přidání, mazání, přejmenování sloupců).
+
+3. **Správa promptů:**
+   - Ukládání, editace a mazání promptů.
+   - Dynamické načítání promptů pro vybraný sloupec.
+
+4. **Generování dat pomocí AI:**
+   - Komunikace s Anthropic Claude API.
+   - Zpracování tabulek po dávkách.
+   - Vizualizace stavu zpracování.
+
+5. **Stahování výsledků:**
+   - Upravenou tabulku exportovat jako CSV nebo Excel.
+
+---
+
+#### **7. Externí dokumentace a zdroje**
+- **Anthropic Claude API:** Dokumentace k integraci a limitům: [https://www.anthropic.com/product](https://www.anthropic.com/product)
+- **Supabase:** 
+- **Next.js:** Dokumentace: [https://nextjs.org/docs](https://nextjs.org/docs)
+- **Shadcn/UI:** Komponentová knihovna: [https://shadcn.dev](https://shadcn.dev)
