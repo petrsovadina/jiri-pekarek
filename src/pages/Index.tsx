@@ -1,12 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { FileUploader } from "@/components/FileUploader";
 import { TablePreview } from "@/components/TablePreview";
-import { PromptEditor } from "@/components/PromptEditor";
-import { Button } from "@/components/ui/button";
-import { LogOut, Settings } from "lucide-react";
-import { Link } from "react-router-dom";
+import { TableLayout } from "@/components/table/TableLayout";
 import { useToast } from "@/components/ui/use-toast";
 
 interface FileData {
@@ -20,26 +16,31 @@ const Index = () => {
   const navigate = useNavigate();
   const [activeFile, setActiveFile] = useState<FileData | null>(null);
   const [selectedColumn, setSelectedColumn] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [progress, setProgress] = useState(0);
   const { toast } = useToast();
+  const [prompts, setPrompts] = useState<Array<{ id: string; name: string; content: string }>>([]);
 
   useEffect(() => {
     const checkUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         navigate("/auth");
+        return;
       }
     };
     checkUser();
 
-    const fetchFiles = async () => {
-      const { data: files, error } = await supabase
+    const fetchData = async () => {
+      // Fetch active file
+      const { data: files, error: filesError } = await supabase
         .from("files")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(1);
 
-      if (error) {
-        console.error("Error fetching files:", error);
+      if (filesError) {
+        console.error("Error fetching files:", filesError);
         return;
       }
 
@@ -52,160 +53,227 @@ const Index = () => {
           columns: file.columns as string[] || []
         });
       }
-    };
 
-    fetchFiles();
-  }, [navigate]);
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    navigate("/auth");
-  };
-
-  const handleHeaderEdit = (oldHeader: string, newHeader: string) => {
-    if (!activeFile) return;
-    toast({
-      title: "Editace hlavičky",
-      description: `Změna z "${oldHeader}" na "${newHeader}"`,
-    });
-  };
-
-  const handleHeaderDelete = (header: string) => {
-    if (!activeFile) return;
-    toast({
-      title: "Smazání hlavičky",
-      description: `Smazána hlavička "${header}"`,
-    });
-  };
-
-  const handleHeaderAdd = (header: string) => {
-    if (!activeFile) return;
-    toast({
-      title: "Přidání hlavičky",
-      description: `Přidána hlavička "${header}"`,
-    });
-  };
-
-  const handleHeaderPromptSelect = (header: string) => {
-    setSelectedColumn(header);
-    toast({
-      title: "Výběr sloupce pro prompt",
-      description: `Vybrán sloupec "${header}"`,
-    });
-  };
-
-  const handlePromptSave = async (prompt: string) => {
-    if (!activeFile) return;
-    
-    try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
-      if (userError || !user) {
-        throw new Error("Pro uložení promptu musíte být přihlášeni");
-      }
-
-      const { error } = await supabase
+      // Fetch prompts
+      const { data: promptsData, error: promptsError } = await supabase
         .from("prompts")
-        .insert({
-          name: "Nový prompt",
-          content: prompt,
-          description: "Automaticky vytvořený prompt",
-          user_id: user.id
-        });
+        .select("*");
 
-      if (error) {
-        toast({
-          title: "Chyba při ukládání promptu",
-          description: error.message,
-          variant: "destructive"
-        });
+      if (promptsError) {
+        console.error("Error fetching prompts:", promptsError);
         return;
       }
 
+      setPrompts(promptsData || []);
+    };
+
+    fetchData();
+  }, [navigate]);
+
+  const handleHeaderEdit = async (oldHeader: string, newHeader: string) => {
+    if (!activeFile) return;
+
+    const updatedColumns = activeFile.columns.map(col => 
+      col === oldHeader ? newHeader : col
+    );
+
+    try {
+      const { error } = await supabase
+        .from("files")
+        .update({ columns: updatedColumns })
+        .eq("id", activeFile.id);
+
+      if (error) throw error;
+
+      setActiveFile(prev => prev ? {
+        ...prev,
+        columns: updatedColumns
+      } : null);
+
       toast({
-        title: "Prompt uložen",
-        description: "Prompt byl úspěšně uložen pro pozdější použití"
+        title: "Sloupec přejmenován",
+        description: `Název sloupce změněn z "${oldHeader}" na "${newHeader}"`,
       });
-    } catch (err) {
+    } catch (error) {
+      console.error("Error updating column:", error);
       toast({
-        title: "Chyba při ukládání promptu",
-        description: err instanceof Error ? err.message : "Nastala neočekávaná chyba",
+        title: "Chyba při přejmenování",
+        description: "Nepodařilo se přejmenovat sloupec",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleHeaderDelete = async (header: string) => {
+    if (!activeFile) return;
+
+    const columnIndex = activeFile.columns.indexOf(header);
+    if (columnIndex === -1) return;
+
+    const updatedColumns = activeFile.columns.filter(col => col !== header);
+    const updatedData = activeFile.data.map(row => 
+      row.filter((_, index) => index !== columnIndex)
+    );
+
+    try {
+      const { error } = await supabase
+        .from("files")
+        .update({ 
+          columns: updatedColumns,
+          data: updatedData
+        })
+        .eq("id", activeFile.id);
+
+      if (error) throw error;
+
+      setActiveFile(prev => prev ? {
+        ...prev,
+        columns: updatedColumns,
+        data: updatedData
+      } : null);
+
+      toast({
+        title: "Sloupec smazán",
+        description: `Sloupec "${header}" byl úspěšně smazán`,
+      });
+    } catch (error) {
+      console.error("Error deleting column:", error);
+      toast({
+        title: "Chyba při mazání",
+        description: "Nepodařilo se smazat sloupec",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleHeaderAdd = async (header: string) => {
+    if (!activeFile) return;
+
+    const updatedColumns = [...activeFile.columns, header];
+    const updatedData = activeFile.data.map(row => [...row, ""]);
+
+    try {
+      const { error } = await supabase
+        .from("files")
+        .update({ 
+          columns: updatedColumns,
+          data: updatedData
+        })
+        .eq("id", activeFile.id);
+
+      if (error) throw error;
+
+      setActiveFile(prev => prev ? {
+        ...prev,
+        columns: updatedColumns,
+        data: updatedData
+      } : null);
+
+      toast({
+        title: "Sloupec přidán",
+        description: `Nový sloupec "${header}" byl úspěšně přidán`,
+      });
+    } catch (error) {
+      console.error("Error adding column:", error);
+      toast({
+        title: "Chyba při přidávání",
+        description: "Nepodařilo se přidat nový sloupec",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleExport = () => {
+    toast({
+      title: "Export",
+      description: "Funkce exportu bude brzy implementována",
+    });
+  };
+
+  const handleSave = async () => {
+    if (!activeFile) return;
+
+    try {
+      const { error } = await supabase
+        .from("files")
+        .update({ 
+          data: activeFile.data,
+          columns: activeFile.columns,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", activeFile.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Změny uloženy",
+        description: "Všechny změny byly úspěšně uloženy",
+      });
+    } catch (error) {
+      console.error("Error saving changes:", error);
+      toast({
+        title: "Chyba při ukládání",
+        description: "Nepodařilo se uložit změny",
         variant: "destructive"
       });
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-gray-900">DataCraft AI</h1>
-            <div className="flex items-center gap-4">
-              <Link to="/settings">
-                <Button variant="ghost" size="icon">
-                  <Settings className="h-5 w-5" />
-                </Button>
-              </Link>
-              <Button variant="ghost" size="icon" onClick={handleSignOut}>
-                <LogOut className="h-5 w-5" />
-              </Button>
-            </div>
-          </div>
+    <TableLayout
+      fileName={activeFile?.name}
+      selectedColumn={selectedColumn}
+      prompts={prompts}
+      onPromptSelect={(promptId) => {
+        const prompt = prompts.find(p => p.id === promptId);
+        if (prompt) {
+          toast({
+            title: "Prompt vybrán",
+            description: `Vybrán prompt "${prompt.name}"`,
+          });
+        }
+      }}
+      onGenerateStart={() => {
+        setIsGenerating(true);
+        setProgress(0);
+        const interval = setInterval(() => {
+          setProgress(prev => {
+            if (prev >= 100) {
+              clearInterval(interval);
+              setIsGenerating(false);
+              return 100;
+            }
+            return prev + 10;
+          });
+        }, 1000);
+      }}
+      onGenerateStop={() => {
+        setIsGenerating(false);
+        setProgress(0);
+      }}
+      isGenerating={isGenerating}
+      progress={progress}
+      onExport={handleExport}
+      onSave={handleSave}
+    >
+      {activeFile ? (
+        <TablePreview
+          headers={activeFile.columns}
+          data={activeFile.data}
+          onHeaderEdit={handleHeaderEdit}
+          onHeaderDelete={handleHeaderDelete}
+          onHeaderAdd={handleHeaderAdd}
+          onHeaderPromptSelect={setSelectedColumn}
+          selectedColumn={selectedColumn}
+        />
+      ) : (
+        <div className="text-center py-12">
+          <p className="text-gray-500">
+            Nahrajte soubor pro zobrazení dat
+          </p>
         </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="space-y-8">
-          <section>
-            <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                Nahrát nový soubor
-              </h2>
-              <FileUploader />
-            </div>
-          </section>
-
-          <section>
-            <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                Náhled dat
-              </h2>
-              {activeFile ? (
-                <TablePreview 
-                  headers={activeFile.columns}
-                  data={activeFile.data}
-                  onHeaderEdit={handleHeaderEdit}
-                  onHeaderDelete={handleHeaderDelete}
-                  onHeaderAdd={handleHeaderAdd}
-                  onHeaderPromptSelect={handleHeaderPromptSelect}
-                  selectedColumn={selectedColumn}
-                />
-              ) : (
-                <p className="text-gray-500">
-                  Nahrajte soubor pro zobrazení dat
-                </p>
-              )}
-            </div>
-          </section>
-
-          <section>
-            <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                Generování pomocí AI
-              </h2>
-              {activeFile ? (
-                <PromptEditor onSave={handlePromptSave} />
-              ) : (
-                <p className="text-gray-500">
-                  Nahrajte soubor pro použití AI generování
-                </p>
-              )}
-            </div>
-          </section>
-        </div>
-      </main>
-    </div>
+      )}
+    </TableLayout>
   );
 };
 
