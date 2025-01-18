@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/form";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { Loader2, Trash2 } from "lucide-react";
 
 const formSchema = z.object({
   anthropic_api_key: z.string().min(1, "API klíč je povinný"),
@@ -27,6 +28,7 @@ const Settings = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -103,10 +105,35 @@ const Settings = () => {
     });
   };
 
+  const handleDeleteApiKey = async () => {
+    setIsDeleting(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ anthropic_api_key: null })
+      .eq("id", (await supabase.auth.getUser()).data.user?.id);
+
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Chyba",
+        description: "Nepodařilo se smazat API klíč",
+      });
+      setIsDeleting(false);
+      return;
+    }
+
+    form.setValue("anthropic_api_key", "");
+    setIsDeleting(false);
+    toast({
+      title: "Úspěch",
+      description: "API klíč byl úspěšně smazán",
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -123,13 +150,30 @@ const Settings = () => {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>API klíč Anthropic Claude</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="password"
-                      placeholder="Zadejte API klíč"
-                      {...field}
-                    />
-                  </FormControl>
+                  <div className="flex gap-2">
+                    <FormControl>
+                      <Input
+                        type="password"
+                        placeholder="Zadejte API klíč"
+                        {...field}
+                      />
+                    </FormControl>
+                    {field.value && (
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        onClick={handleDeleteApiKey}
+                        disabled={isDeleting}
+                      >
+                        {isDeleting ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
@@ -137,7 +181,7 @@ const Settings = () => {
             <Button type="submit" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting ? (
                 <>
-                  <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Ukládám...
                 </>
               ) : (
