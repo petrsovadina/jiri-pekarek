@@ -1,129 +1,155 @@
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Auth as SupabaseAuth } from "@supabase/auth-ui-react";
-import { ThemeSupa } from "@supabase/auth-ui-shared";
-import { supabase } from "@/integrations/supabase/client";
-import { Card } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useState } from "react";
-import { AuthError, AuthApiError } from "@supabase/supabase-js";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const Auth = () => {
   const navigate = useNavigate();
-  const [errorMessage, setErrorMessage] = useState("");
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        navigate("/");
-      }
-      if (event === 'USER_UPDATED') {
-        const checkSession = async () => {
-          const { error } = await supabase.auth.getSession();
-          if (error) {
-            setErrorMessage(getErrorMessage(error));
-          }
-        };
-        checkSession();
-      }
-      if (event === 'SIGNED_OUT') {
-        setErrorMessage("");
-      }
-    });
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
 
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-  const getErrorMessage = (error: AuthError) => {
-    if (error instanceof AuthApiError) {
-      switch (error.code) {
-        case 'invalid_credentials':
-          return 'Neplatný email nebo heslo. Zkontrolujte prosím své přihlašovací údaje.';
-        case 'email_not_confirmed':
-          return 'Prosím potvrďte svůj email před přihlášením.';
-        case 'user_not_found':
-          return 'Uživatel s těmito údaji nebyl nalezen.';
-        case 'invalid_grant':
-          return 'Neplatné přihlašovací údaje.';
-        default:
-          return 'Nastala chyba při přihlašování. Zkuste to prosím znovu.';
+      if (error) {
+        throw error;
       }
+
+      toast({
+        title: "Přihlášení úspěšné",
+        description: "Vítejte zpět!",
+      });
+
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Chyba při přihlášení:", error);
+      toast({
+        title: "Chyba při přihlášení",
+        description: error instanceof Error ? error.message : "Nastala neočekávaná chyba",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
-    return error.message;
+  };
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Registrace úspěšná",
+        description: "Prosím zkontrolujte svůj email pro potvrzení registrace.",
+      });
+    } catch (error) {
+      console.error("Chyba při registraci:", error);
+      toast({
+        title: "Chyba při registraci",
+        description: error instanceof Error ? error.message : "Nastala neočekávaná chyba",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center p-4">
-      <Card className="w-full max-w-md p-8 shadow-lg">
-        <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold text-gray-900">DataCraft AI</h1>
-          <p className="text-muted-foreground mt-2">
+    <div className="container flex items-center justify-center min-h-screen">
+      <Card className="w-[400px]">
+        <CardHeader className="text-center">
+          <CardTitle>DataCraft AI</CardTitle>
+          <CardDescription>
             Přihlaste se nebo si vytvořte nový účet
-          </p>
-        </div>
-
-        {errorMessage && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertDescription>{errorMessage}</AlertDescription>
-          </Alert>
-        )}
-
-        <SupabaseAuth
-          supabaseClient={supabase}
-          appearance={{
-            theme: ThemeSupa,
-            variables: {
-              default: {
-                colors: {
-                  brand: 'rgb(59 130 246)',
-                  brandAccent: 'rgb(37 99 235)',
-                  inputBackground: 'white',
-                  inputText: 'black',
-                },
-                borderWidths: {
-                  buttonBorderWidth: '1px',
-                  inputBorderWidth: '1px',
-                },
-                radii: {
-                  borderRadiusButton: '0.5rem',
-                  buttonBorderRadius: '0.5rem',
-                  inputBorderRadius: '0.5rem',
-                },
-              },
-            },
-            className: {
-              container: 'w-full',
-              button: 'w-full px-4 py-2 rounded-lg',
-              input: 'w-full px-4 py-2 rounded-lg border border-gray-300',
-              label: 'text-sm font-medium text-gray-700',
-            },
-          }}
-          localization={{
-            variables: {
-              sign_in: {
-                email_label: "E-mailová adresa",
-                password_label: "Heslo",
-                button_label: "Přihlásit se",
-                loading_button_label: "Přihlašování...",
-                email_input_placeholder: "vase@email.cz",
-                password_input_placeholder: "Vaše heslo",
-              },
-              sign_up: {
-                email_label: "E-mailová adresa",
-                password_label: "Heslo",
-                button_label: "Registrovat se",
-                loading_button_label: "Registrace...",
-                email_input_placeholder: "vase@email.cz",
-                password_input_placeholder: "Silné heslo",
-              },
-              forgotten_password: {
-                button_label: "Obnovit heslo",
-                loading_button_label: "Odesílání...",
-                email_input_placeholder: "vase@email.cz",
-              },
-            },
-          }}
-        />
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="signin">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="signin">Přihlášení</TabsTrigger>
+              <TabsTrigger value="signup">Registrace</TabsTrigger>
+            </TabsList>
+            <TabsContent value="signin">
+              <form onSubmit={handleSignIn} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="vas@email.cz"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Heslo</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? "Přihlašuji..." : "Přihlásit se"}
+                </Button>
+              </form>
+            </TabsContent>
+            <TabsContent value="signup">
+              <form onSubmit={handleSignUp} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="signup-email">Email</Label>
+                  <Input
+                    id="signup-email"
+                    type="email"
+                    placeholder="vas@email.cz"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-password">Heslo</Label>
+                  <Input
+                    id="signup-password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? "Registruji..." : "Zaregistrovat se"}
+                </Button>
+              </form>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
       </Card>
     </div>
   );

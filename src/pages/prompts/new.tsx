@@ -1,4 +1,4 @@
-import PromptForm from "@/components/PromptForm";
+import PromptForm from "@/components/custom/PromptForm";
 
 const NewPrompt = () => {
   return (

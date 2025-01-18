@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
-import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import { Workbook } from 'exceljs';
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client"; // Ponecháme pro auth
+import { uploadFile } from '@/lib/api';
 
 export const FileUploader = () => {
   const [isUploading, setIsUploading] = useState(false);
@@ -49,96 +50,48 @@ export const FileUploader = () => {
           let columns;
 
           if (file.name.endsWith(".csv")) {
-            try {
-              const text = data as string;
-              const rows = text.split("\n").map((row) => row.split(","));
-              columns = rows[0];
-              parsedData = rows.slice(1);
-            } catch (parseError) {
-              console.error("Chyba při parsování CSV:", parseError);
-              setError(`Chyba při parsování CSV: ${parseError.message}`);
-              toast({
-                variant: "destructive",
-                title: "Chyba při parsování CSV",
-                description: `Chyba při parsování CSV: ${parseError.message}`,
-              });
-              setIsUploading(false);
-              return;
-            }
+            const text = data as string;
+            const rows = text.split("\n").map((row) => row.split(","));
+            columns = rows[0];
+            parsedData = rows.slice(1);
           } else if (file.name.endsWith(".xlsx")) {
-            try {
-              const workbook = new Workbook();
-              const buffer = e.target?.result as ArrayBuffer;
-              await workbook.xlsx.load(buffer);
-              const worksheet = workbook.getWorksheet(1);
-              if (!worksheet) {
-                throw new Error("Excel soubor neobsahuje žádný list");
-              }
-
-              const jsonData: (string | number | boolean | null)[][] = [];
-              worksheet.eachRow((row) => {
-                jsonData.push(row.values as (string | number | boolean | null)[]);
-              });
-
-              columns = jsonData[0].slice(1);
-              parsedData = jsonData.slice(1).map((row) => row.slice(1));
-            } catch (parseError) {
-              console.error("Chyba při parsování XLSX:", parseError);
-              setError(`Chyba při parsování XLSX: ${parseError.message}`);
-               toast({
-                variant: "destructive",
-                title: "Chyba při parsování XLSX",
-                description: `Chyba při parsování XLSX: ${parseError.message}`,
-              });
-              setIsUploading(false);
-              return;
-            }
-          }
-
-          try {
-            const { data: fileData, error: fileError } = await supabase
-              .from("files")
-              .insert({
-                name: file.name,
-                original_name: file.name,
-                mime_type: file.type,
-                size: file.size,
-                columns: columns,
-                data: parsedData,
-                status: "pending",
-                user_id: userId,
-              })
-              .select()
-              .single();
-
-            if (fileError) {
-              console.error("Chyba při ukládání do Supabase:", fileError);
-              setError(`Chyba při ukládání do Supabase: ${fileError.message}`);
-              toast({
-                variant: "destructive",
-                title: "Chyba při ukládání do Supabase",
-                description: `Chyba při ukládání do Supabase: ${fileError.message}`,
-              });
-              setIsUploading(false);
-              return;
+            const workbook = new Workbook();
+            const buffer = e.target?.result as ArrayBuffer;
+            await workbook.xlsx.load(buffer);
+            const worksheet = workbook.getWorksheet(1);
+            if (!worksheet) {
+              throw new Error("Excel soubor neobsahuje žádný list");
             }
 
-            toast({
-              title: "Soubor byl úspěšně nahrán",
-              description: "Data byla zpracována a uložena",
+            const jsonData: (string | number | boolean | null)[][] = [];
+            worksheet.eachRow((row) => {
+              jsonData.push(row.values as (string | number | boolean | null)[]);
             });
-            setUploadProgress(100);
-            navigate(`/editor/${fileData.id}`);
-          } catch (supabaseError) {
-            console.error("Chyba při komunikaci se Supabase:", supabaseError);
-            setError(`Chyba při komunikaci se Supabase: ${supabaseError.message}`);
-             toast({
-                variant: "destructive",
-                title: "Chyba při komunikaci se Supabase",
-                description: `Chyba při komunikaci se Supabase: ${supabaseError.message}`,
-              });
-            setIsUploading(false);
+
+            columns = jsonData[0].slice(1);
+            parsedData = jsonData.slice(1).map((row) => row.slice(1));
           }
+
+          const fileData = {
+            name: file.name,
+            original_name: file.name,
+            mime_type: file.type,
+            size: file.size.toString(),
+            columns: columns,
+            data: parsedData,
+            status: 'pending',
+            user_id: userId
+          };
+
+          const result = await uploadFile(fileData);
+          
+          toast({
+            title: "Soubor byl úspěšně nahrán",
+            description: "Data byla zpracována a uložena",
+          });
+          
+          setUploadProgress(100);
+          navigate(`/editor/${result.id}`);
         } catch (err) {
           const errorMessage = err instanceof Error ? err.message : "Nastala neočekávaná chyba";
           console.error("Chyba při zpracování souboru:", err);
@@ -177,7 +130,7 @@ export const FileUploader = () => {
       const file = acceptedFiles[0];
 
       try {
-        // Get current user
+        // Get current user from Supabase Auth
         const {
           data: { user },
           error: userError,
@@ -209,7 +162,7 @@ export const FileUploader = () => {
         setIsUploading(false);
       }
     },
-    [processFile, toast, navigate]
+    [processFile, toast]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({

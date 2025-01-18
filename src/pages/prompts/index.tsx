@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import PromptList from "@/components/PromptList";
+import PromptList from "@/components/custom/PromptList";
 
 const Prompts = () => {
   return (
