@@ -50,10 +50,10 @@ const Settings = () => {
         .from("profiles")
         .select("anthropic_api_key")
         .eq("id", session.user.id)
-        .single();
+        .maybeSingle();
 
       // Pokud profil neexistuje, vytvoříme ho
-      if (profileError && profileError.code === "PGRST116") {
+      if (!profile) {
         const { error: insertError } = await supabase
           .from("profiles")
           .insert({ id: session.user.id });
