@@ -2,7 +2,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Pencil, Trash2, Plus } from "lucide-react";
+import { Pencil, Trash2, Plus, MessageSquare } from "lucide-react";
 import { useState } from "react";
 
 interface TablePreviewProps {
@@ -11,6 +11,8 @@ interface TablePreviewProps {
   onHeaderEdit: (oldHeader: string, newHeader: string) => void;
   onHeaderDelete: (header: string) => void;
   onHeaderAdd: (header: string) => void;
+  onHeaderPromptSelect: (header: string) => void;
+  selectedColumn: string | null;
 }
 
 export const TablePreview = ({
@@ -19,6 +21,8 @@ export const TablePreview = ({
   onHeaderEdit,
   onHeaderDelete,
   onHeaderAdd,
+  onHeaderPromptSelect,
+  selectedColumn,
 }: TablePreviewProps) => {
   const [editingHeader, setEditingHeader] = useState<string | null>(null);
   const [newHeaderValue, setNewHeaderValue] = useState("");
@@ -52,7 +56,10 @@ export const TablePreview = ({
           <TableHeader>
             <TableRow>
               {headers.map((header) => (
-                <TableHead key={header} className="min-w-[150px]">
+                <TableHead 
+                  key={header} 
+                  className={`min-w-[150px] ${selectedColumn === header ? 'bg-primary/10' : ''}`}
+                >
                   <div className="flex items-center gap-2">
                     {editingHeader === header ? (
                       <Input
@@ -78,6 +85,14 @@ export const TablePreview = ({
                           <Button
                             variant="ghost"
                             size="icon"
+                            className="h-6 w-6"
+                            onClick={() => onHeaderPromptSelect(header)}
+                          >
+                            <MessageSquare className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             className="h-6 w-6 text-destructive"
                             onClick={() => onHeaderDelete(header)}
                           >
@@ -98,7 +113,7 @@ export const TablePreview = ({
                       onBlur={() => setIsAddingHeader(false)}
                       onKeyDown={(e) => e.key === "Enter" && handleHeaderAdd()}
                       className="h-8"
-                      placeholder="New column"
+                      placeholder="Nový sloupec"
                       autoFocus
                     />
                   </div>
