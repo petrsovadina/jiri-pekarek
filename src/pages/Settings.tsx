@@ -43,12 +43,28 @@ const Settings = () => {
         return;
       }
 
-      const { data: profile, error } = await supabase
+      // Nejdřív zkusíme načíst profil
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("anthropic_api_key")
+        .eq("id", session.user.id)
         .single();
 
-      if (error) {
+      // Pokud profil neexistuje, vytvoříme ho
+      if (profileError && profileError.code === "PGRST116") {
+        const { error: insertError } = await supabase
+          .from("profiles")
+          .insert({ id: session.user.id });
+
+        if (insertError) {
+          toast({
+            variant: "destructive",
+            title: "Chyba",
+            description: "Nepodařilo se vytvořit profil",
+          });
+          return;
+        }
+      } else if (profileError) {
         toast({
           variant: "destructive",
           title: "Chyba",

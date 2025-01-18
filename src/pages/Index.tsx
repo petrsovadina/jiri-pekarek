@@ -19,6 +19,7 @@ interface FileData {
 const Index = () => {
   const navigate = useNavigate();
   const [activeFile, setActiveFile] = useState<FileData | null>(null);
+  const [selectedColumn, setSelectedColumn] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -85,11 +86,18 @@ const Index = () => {
     });
   };
 
+  const handleHeaderPromptSelect = (header: string) => {
+    setSelectedColumn(header);
+    toast({
+      title: "Výběr sloupce pro prompt",
+      description: `Vybrán sloupec "${header}"`,
+    });
+  };
+
   const handlePromptSave = async (prompt: string) => {
     if (!activeFile) return;
     
     try {
-      // Get current user
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
       if (userError || !user) {
@@ -170,6 +178,8 @@ const Index = () => {
                   onHeaderEdit={handleHeaderEdit}
                   onHeaderDelete={handleHeaderDelete}
                   onHeaderAdd={handleHeaderAdd}
+                  onHeaderPromptSelect={handleHeaderPromptSelect}
+                  selectedColumn={selectedColumn}
                 />
               ) : (
                 <p className="text-gray-500">
