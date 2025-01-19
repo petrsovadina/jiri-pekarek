@@ -4,6 +4,7 @@ import { useFileManagement } from "@/hooks/useFileManagement";
 import { usePromptManagement } from "@/hooks/usePromptManagement";
 import { useGenerationManagement } from "@/hooks/useGenerationManagement";
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
   const { toast } = useToast();
