@@ -8,6 +8,7 @@ interface TableLayoutProps {
   selectedColumn: string | null;
   prompts: Array<{ id: string; name: string; content: string }>;
   onPromptSelect: (promptId: string) => void;
+  onPromptCreate: (name: string, content: string) => void;
   onGenerateStart: () => void;
   onGenerateStop: () => void;
   isGenerating: boolean;
@@ -22,6 +23,7 @@ export const TableLayout = ({
   selectedColumn,
   prompts,
   onPromptSelect,
+  onPromptCreate,
   onGenerateStart,
   onGenerateStop,
   isGenerating,
@@ -45,6 +47,7 @@ export const TableLayout = ({
             selectedColumn={selectedColumn}
             prompts={prompts}
             onPromptSelect={onPromptSelect}
+            onPromptCreate={onPromptCreate}
             onGenerateStart={onGenerateStart}
             onGenerateStop={onGenerateStop}
             isGenerating={isGenerating}

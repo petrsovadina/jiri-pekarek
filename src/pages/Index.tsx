@@ -183,6 +183,73 @@ const Index = () => {
     }
   };
 
+  const handleCellChange = async (rowIndex: number, colIndex: number, value: string) => {
+    if (!activeFile) return;
+
+    const updatedData = activeFile.data.map((row, rIndex) =>
+      rIndex === rowIndex
+        ? row.map((cell, cIndex) => (cIndex === colIndex ? value : cell))
+        : row
+    );
+
+    try {
+      const { error } = await supabase
+        .from("files")
+        .update({ data: updatedData })
+        .eq("id", activeFile.id);
+
+      if (error) throw error;
+
+      setActiveFile(prev => prev ? {
+        ...prev,
+        data: updatedData
+      } : null);
+
+      toast({
+        title: "Buňka upravena",
+        description: "Hodnota buňky byla úspěšně změněna",
+      });
+    } catch (error) {
+      console.error("Error updating cell:", error);
+      toast({
+        title: "Chyba při úpravě",
+        description: "Nepodařilo se upravit hodnotu buňky",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handlePromptCreate = async (name: string, content: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("prompts")
+        .insert([
+          { name, content, user_id: user.id }
+        ])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setPrompts(prev => [...prev, data]);
+
+      toast({
+        title: "Prompt vytvořen",
+        description: `Nový prompt "${name}" byl úspěšně vytvořen`,
+      });
+    } catch (error) {
+      console.error("Error creating prompt:", error);
+      toast({
+        title: "Chyba při vytváření",
+        description: "Nepodařilo se vytvořit nový prompt",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleExport = () => {
     toast({
       title: "Export",
@@ -233,6 +300,7 @@ const Index = () => {
           });
         }
       }}
+      onPromptCreate={handlePromptCreate}
       onGenerateStart={() => {
         setIsGenerating(true);
         setProgress(0);
@@ -264,6 +332,7 @@ const Index = () => {
           onHeaderDelete={handleHeaderDelete}
           onHeaderAdd={handleHeaderAdd}
           onHeaderPromptSelect={setSelectedColumn}
+          onCellChange={handleCellChange}
           selectedColumn={selectedColumn}
         />
       ) : (
