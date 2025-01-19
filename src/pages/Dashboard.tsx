@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, FileSpreadsheet } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 interface File {
   id: string;
@@ -16,6 +17,8 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [files, setFiles] = useState<File[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -49,12 +52,95 @@ const Dashboard = () => {
     navigate(`/${fileId}`);
   };
 
+  const handleFileUpload = async (file: File) => {
+    setIsUploading(true);
+    try {
+      const reader = new FileReader();
+      
+      reader.onload = async (e) => {
+        try {
+          const data = e.target?.result;
+          let parsedData;
+          let columns;
+          
+          if (file.name.endsWith('.csv')) {
+            const text = data as string;
+            const rows = text.split('\n').map(row => row.split(','));
+            columns = rows[0];
+            parsedData = rows.slice(1);
+          } else if (file.name.endsWith('.xlsx')) {
+            // Handle XLSX files here if needed
+            toast({
+              title: "XLSX formát není momentálně podporován",
+              description: "Prosím nahrajte soubor ve formátu CSV",
+              variant: "destructive"
+            });
+            return;
+          }
+
+          const { data: fileData, error: fileError } = await supabase
+            .from('files')
+            .insert({
+              name: file.name,
+              original_name: file.name,
+              mime_type: file.type,
+              size: file.size,
+              columns: columns,
+              data: parsedData,
+              status: 'pending',
+            })
+            .select()
+            .single();
+
+          if (fileError) throw fileError;
+
+          toast({
+            title: "Soubor byl úspěšně nahrán",
+            description: "Data byla zpracována a uložena",
+          });
+
+          // Refresh the files list
+          const { data: newFiles } = await supabase
+            .from("files")
+            .select("id, name, created_at")
+            .order("created_at", { ascending: false });
+          
+          setFiles(newFiles || []);
+
+        } catch (err) {
+          toast({
+            variant: "destructive",
+            title: "Chyba při zpracování",
+            description: err instanceof Error ? err.message : "Nastala neočekávaná chyba",
+          });
+        }
+      };
+
+      if (file.name.endsWith('.csv')) {
+        reader.readAsText(file);
+      }
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Chyba při nahrávání",
+        description: err instanceof Error ? err.message : "Nastala neočekávaná chyba",
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold">Moje tabulky</h1>
-          <FileUpload />
+          <FileUpload 
+            onFileUpload={handleFileUpload}
+            isLoading={isUploading}
+            acceptedFileTypes={['.csv']}
+            maxSizeInMB={10}
+          />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
