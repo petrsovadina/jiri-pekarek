@@ -2,13 +2,15 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Play, Square } from "lucide-react";
+import { Play, Square, Plus } from "lucide-react";
 import { useState } from "react";
+import { CreatePromptDialog } from "./table/CreatePromptDialog";
 
 interface TableSidebarProps {
   selectedColumn: string | null;
   prompts: Array<{ id: string; name: string; content: string }>;
   onPromptSelect: (promptId: string) => void;
+  onPromptCreate: (name: string, content: string) => void;
   onGenerateStart: () => void;
   onGenerateStop: () => void;
   isGenerating: boolean;
@@ -19,12 +21,14 @@ export const TableSidebar = ({
   selectedColumn,
   prompts,
   onPromptSelect,
+  onPromptCreate,
   onGenerateStart,
   onGenerateStop,
   isGenerating,
   progress,
 }: TableSidebarProps) => {
   const [selectedPrompt, setSelectedPrompt] = useState<string>("");
+  const [isCreatePromptDialogOpen, setIsCreatePromptDialogOpen] = useState(false);
 
   const handlePromptSelect = (value: string) => {
     setSelectedPrompt(value);
@@ -46,7 +50,17 @@ export const TableSidebar = ({
               </div>
               
               <div className="space-y-2">
-                <label className="text-sm text-muted-foreground">Vyberte prompt</label>
+                <div className="flex justify-between items-center">
+                  <label className="text-sm text-muted-foreground">Vyberte prompt</label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsCreatePromptDialogOpen(true)}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nový prompt
+                  </Button>
+                </div>
                 <Select value={selectedPrompt} onValueChange={handlePromptSelect}>
                   <SelectTrigger>
                     <SelectValue placeholder="Vyberte prompt" />
@@ -87,7 +101,7 @@ export const TableSidebar = ({
                     className="w-full"
                     onClick={onGenerateStop}
                   >
-                    <Square className="w-4 h-4 mr-2" />
+                    <Square className="h-4 w-4 mr-2" />
                     Zastavit
                   </Button>
                 </>
@@ -96,7 +110,7 @@ export const TableSidebar = ({
                   className="w-full"
                   onClick={onGenerateStart}
                 >
-                  <Play className="w-4 h-4 mr-2" />
+                  <Play className="h-4 w-4 mr-2" />
                   Spustit generování
                 </Button>
               )}
@@ -108,6 +122,12 @@ export const TableSidebar = ({
           )}
         </Card>
       </div>
+
+      <CreatePromptDialog
+        open={isCreatePromptDialogOpen}
+        onClose={() => setIsCreatePromptDialogOpen(false)}
+        onSave={onPromptCreate}
+      />
     </div>
   );
 };

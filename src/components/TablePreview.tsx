@@ -4,14 +4,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Pencil, Trash2, Plus, MessageSquare } from "lucide-react";
 import { useState } from "react";
+import { TableCell as EditableTableCell } from "./table/TableCell";
+import { AddColumnDialog } from "./table/AddColumnDialog";
 
 interface TablePreviewProps {
   headers: string[];
   data: string[][];
   onHeaderEdit: (oldHeader: string, newHeader: string) => void;
   onHeaderDelete: (header: string) => void;
-  onHeaderAdd: (header: string) => void;
+  onHeaderAdd: (header: string, type: string) => void;
   onHeaderPromptSelect: (header: string) => void;
+  onCellChange: (rowIndex: number, colIndex: number, value: string) => void;
   selectedColumn: string | null;
 }
 
@@ -22,12 +25,12 @@ export const TablePreview = ({
   onHeaderDelete,
   onHeaderAdd,
   onHeaderPromptSelect,
+  onCellChange,
   selectedColumn,
 }: TablePreviewProps) => {
   const [editingHeader, setEditingHeader] = useState<string | null>(null);
   const [newHeaderValue, setNewHeaderValue] = useState("");
-  const [isAddingHeader, setIsAddingHeader] = useState(false);
-  const [newHeader, setNewHeader] = useState("");
+  const [isAddColumnDialogOpen, setIsAddColumnDialogOpen] = useState(false);
 
   const handleHeaderEdit = (header: string) => {
     setEditingHeader(header);
@@ -39,14 +42,6 @@ export const TablePreview = ({
       onHeaderEdit(editingHeader, newHeaderValue.trim());
     }
     setEditingHeader(null);
-  };
-
-  const handleHeaderAdd = () => {
-    if (newHeader.trim()) {
-      onHeaderAdd(newHeader.trim());
-      setNewHeader("");
-      setIsAddingHeader(false);
-    }
   };
 
   return (
@@ -105,36 +100,26 @@ export const TablePreview = ({
                 </TableHead>
               ))}
               <TableHead className="w-[100px]">
-                {isAddingHeader ? (
-                  <div className="flex items-center gap-2">
-                    <Input
-                      value={newHeader}
-                      onChange={(e) => setNewHeader(e.target.value)}
-                      onBlur={() => setIsAddingHeader(false)}
-                      onKeyDown={(e) => e.key === "Enter" && handleHeaderAdd()}
-                      className="h-8"
-                      placeholder="Nový sloupec"
-                      autoFocus
-                    />
-                  </div>
-                ) : (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setIsAddingHeader(true)}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setIsAddColumnDialogOpen(true)}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
               </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.map((row, i) => (
-              <TableRow key={i}>
-                {row.map((cell, j) => (
-                  <TableCell key={`${i}-${j}`}>{cell}</TableCell>
+            {data.map((row, rowIndex) => (
+              <TableRow key={rowIndex}>
+                {row.map((cell, colIndex) => (
+                  <EditableTableCell
+                    key={`${rowIndex}-${colIndex}`}
+                    value={cell}
+                    onChange={(value) => onCellChange(rowIndex, colIndex, value)}
+                  />
                 ))}
                 <TableCell />
               </TableRow>
@@ -142,6 +127,11 @@ export const TablePreview = ({
           </TableBody>
         </Table>
       </ScrollArea>
+      <AddColumnDialog
+        open={isAddColumnDialogOpen}
+        onClose={() => setIsAddColumnDialogOpen(false)}
+        onAdd={onHeaderAdd}
+      />
     </div>
   );
 };
