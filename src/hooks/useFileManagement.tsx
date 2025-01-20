@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useFileColumns } from "./useFileColumns";
 import { useFileData } from "./useFileData";
+import { useToast } from "@/components/ui/use-toast";
 
 interface FileData {
   id: string;
@@ -11,9 +12,12 @@ interface FileData {
   columns: string[];
 }
 
-export const useFileManagement = () => {
+export const useFileManagement = (fileId?: string) => {
   const [activeFile, setActiveFile] = useState<FileData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
     const checkUser = async () => {
@@ -26,30 +30,63 @@ export const useFileManagement = () => {
     checkUser();
 
     const fetchData = async () => {
-      const { data: files, error: filesError } = await supabase
-        .from("files")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(1);
+      try {
+        setIsLoading(true);
+        setError(null);
+        console.log("Fetching file data for ID:", fileId);
 
-      if (filesError) {
-        console.error("Error fetching files:", filesError);
-        return;
-      }
+        const query = supabase
+          .from("files")
+          .select("*");
 
-      if (files && files.length > 0) {
-        const file = files[0];
-        setActiveFile({
-          id: file.id,
-          name: file.name,
-          data: file.data as string[][] || [],
-          columns: file.columns as string[] || []
-        });
+        // Pokud máme fileId, načteme konkrétní soubor
+        if (fileId) {
+          query.eq("id", fileId);
+        } else {
+          // Jinak načteme první aktivní soubor
+          query.eq("is_active", true);
+        }
+
+        const { data: files, error: filesError } = await query.limit(1);
+
+        if (filesError) {
+          console.error("Error fetching files:", filesError);
+          setError("Nepodařilo se načíst data souboru");
+          return;
+        }
+
+        if (files && files.length > 0) {
+          const file = files[0];
+          console.log("File loaded:", file);
+          
+          setActiveFile({
+            id: file.id,
+            name: file.name,
+            data: file.data as string[][] || [],
+            columns: file.columns as string[] || []
+          });
+
+          // Pokud jsme načetli soubor bez fileId, aktualizujeme URL
+          if (!fileId) {
+            navigate(`/${file.id}`);
+          }
+        } else {
+          console.log("No files found");
+          setError("Soubor nebyl nalezen");
+          if (fileId) {
+            navigate("/dashboard");
+          }
+        }
+      } catch (err) {
+        console.error("Unexpected error:", err);
+        setError("Nastala neočekávaná chyba");
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchData();
-  }, [navigate]);
+  }, [fileId, navigate]);
 
   const { columns, handleHeaderEdit, handleHeaderDelete, handleHeaderAdd } = useFileColumns({
     fileId: activeFile?.id || "",
@@ -73,6 +110,8 @@ export const useFileManagement = () => {
       data,
       columns
     } : null,
+    isLoading,
+    error,
     handleHeaderEdit,
     handleHeaderDelete,
     handleHeaderAdd,
