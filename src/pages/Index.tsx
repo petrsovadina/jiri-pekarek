@@ -5,9 +5,15 @@ import { usePromptManagement } from "@/hooks/usePromptManagement";
 import { useGenerationManagement } from "@/hooks/useGenerationManagement";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 
 const Index = () => {
+  const { fileId } = useParams();
   const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
   const { 
     activeFile,
     handleHeaderEdit,
@@ -29,6 +35,51 @@ const Index = () => {
     handleGenerateStart,
     handleGenerateStop
   } = useGenerationManagement();
+
+  useEffect(() => {
+    const loadFileData = async () => {
+      if (!fileId) return;
+
+      try {
+        setIsLoading(true);
+        setError(null);
+        console.log("Loading file data for ID:", fileId);
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setError("Pro zobrazení souboru musíte být přihlášeni");
+          return;
+        }
+
+        const { data: fileData, error: fileError } = await supabase
+          .from("files")
+          .select("*")
+          .eq("id", fileId)
+          .eq("user_id", user.id)
+          .single();
+
+        if (fileError) {
+          console.error("Error loading file:", fileError);
+          setError("Nepodařilo se načíst data souboru");
+          return;
+        }
+
+        if (!fileData) {
+          setError("Soubor nebyl nalezen");
+          return;
+        }
+
+        console.log("File data loaded:", fileData);
+      } catch (err) {
+        console.error("Error in loadFileData:", err);
+        setError("Nastala neočekávaná chyba při načítání souboru");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadFileData();
+  }, [fileId]);
 
   const handleExport = () => {
     toast({
@@ -65,6 +116,27 @@ const Index = () => {
       });
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-gray-500">Načítání dat...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-red-500 mb-2">{error}</p>
+          <p className="text-gray-500">
+            Zkontrolujte, zda máte přístup k tomuto souboru a zkuste to znovu
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <TableLayout
