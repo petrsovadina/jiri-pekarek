@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
+import { useFileColumns } from "./useFileColumns";
+import { useFileData } from "./useFileData";
 
 interface FileData {
   id: string;
@@ -12,7 +13,6 @@ interface FileData {
 
 export const useFileManagement = () => {
   const [activeFile, setActiveFile] = useState<FileData | null>(null);
-  const { toast } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -51,157 +51,28 @@ export const useFileManagement = () => {
     fetchData();
   }, [navigate]);
 
-  const handleHeaderEdit = async (oldHeader: string, newHeader: string) => {
-    if (!activeFile) return;
-
-    const updatedColumns = activeFile.columns.map(col => 
-      col === oldHeader ? newHeader : col
-    );
-
-    try {
-      const { error } = await supabase
-        .from("files")
-        .update({ columns: updatedColumns })
-        .eq("id", activeFile.id);
-
-      if (error) throw error;
-
-      setActiveFile(prev => prev ? {
-        ...prev,
-        columns: updatedColumns
-      } : null);
-
-      toast({
-        title: "Sloupec přejmenován",
-        description: `Název sloupce změněn z "${oldHeader}" na "${newHeader}"`,
-      });
-    } catch (error) {
-      console.error("Error updating column:", error);
-      toast({
-        title: "Chyba při přejmenování",
-        description: "Nepodařilo se přejmenovat sloupec",
-        variant: "destructive"
-      });
+  const { columns, handleHeaderEdit, handleHeaderDelete, handleHeaderAdd } = useFileColumns({
+    fileId: activeFile?.id || "",
+    initialColumns: activeFile?.columns || [],
+    onColumnsUpdate: (newColumns) => {
+      setActiveFile(prev => prev ? { ...prev, columns: newColumns } : null);
     }
-  };
+  });
 
-  const handleHeaderDelete = async (header: string) => {
-    if (!activeFile) return;
-
-    const columnIndex = activeFile.columns.indexOf(header);
-    if (columnIndex === -1) return;
-
-    const updatedColumns = activeFile.columns.filter(col => col !== header);
-    const updatedData = activeFile.data.map(row => 
-      row.filter((_, index) => index !== columnIndex)
-    );
-
-    try {
-      const { error } = await supabase
-        .from("files")
-        .update({ 
-          columns: updatedColumns,
-          data: updatedData
-        })
-        .eq("id", activeFile.id);
-
-      if (error) throw error;
-
-      setActiveFile(prev => prev ? {
-        ...prev,
-        columns: updatedColumns,
-        data: updatedData
-      } : null);
-
-      toast({
-        title: "Sloupec smazán",
-        description: `Sloupec "${header}" byl úspěšně smazán`,
-      });
-    } catch (error) {
-      console.error("Error deleting column:", error);
-      toast({
-        title: "Chyba při mazání",
-        description: "Nepodařilo se smazat sloupec",
-        variant: "destructive"
-      });
+  const { data, handleCellChange } = useFileData({
+    fileId: activeFile?.id || "",
+    initialData: activeFile?.data || [],
+    onDataUpdate: (newData) => {
+      setActiveFile(prev => prev ? { ...prev, data: newData } : null);
     }
-  };
-
-  const handleHeaderAdd = async (header: string) => {
-    if (!activeFile) return;
-
-    const updatedColumns = [...activeFile.columns, header];
-    const updatedData = activeFile.data.map(row => [...row, ""]);
-
-    try {
-      const { error } = await supabase
-        .from("files")
-        .update({ 
-          columns: updatedColumns,
-          data: updatedData
-        })
-        .eq("id", activeFile.id);
-
-      if (error) throw error;
-
-      setActiveFile(prev => prev ? {
-        ...prev,
-        columns: updatedColumns,
-        data: updatedData
-      } : null);
-
-      toast({
-        title: "Sloupec přidán",
-        description: `Nový sloupec "${header}" byl úspěšně přidán`,
-      });
-    } catch (error) {
-      console.error("Error adding column:", error);
-      toast({
-        title: "Chyba při přidávání",
-        description: "Nepodařilo se přidat nový sloupec",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleCellChange = async (rowIndex: number, colIndex: number, value: string) => {
-    if (!activeFile) return;
-
-    const updatedData = activeFile.data.map((row, rIndex) =>
-      rIndex === rowIndex
-        ? row.map((cell, cIndex) => (cIndex === colIndex ? value : cell))
-        : row
-    );
-
-    try {
-      const { error } = await supabase
-        .from("files")
-        .update({ data: updatedData })
-        .eq("id", activeFile.id);
-
-      if (error) throw error;
-
-      setActiveFile(prev => prev ? {
-        ...prev,
-        data: updatedData
-      } : null);
-
-      toast({
-        title: "Buňka upravena",
-        description: "Hodnota buňky byla úspěšně změněna",
-      });
-    } catch (error) {
-      console.error("Error updating cell:", error);
-      toast({
-        title: "Chyba při úpravě",
-        description: "Nepodařilo se upravit hodnotu buňky",
-        variant: "destructive"
-      });
-    }
-  };
+  });
 
   return {
-    activeFile,
+    activeFile: activeFile ? {
+      ...activeFile,
+      data,
+      columns
+    } : null,
     handleHeaderEdit,
     handleHeaderDelete,
     handleHeaderAdd,
