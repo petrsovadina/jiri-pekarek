@@ -8,12 +8,14 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import * as XLSX from 'xlsx';
+import { useNavigate } from "react-router-dom";
 
 export const FileUploader = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const processFile = async (file: File, userId: string) => {
     try {
@@ -48,7 +50,8 @@ export const FileUploader = () => {
               columns: columns,
               data: parsedData,
               status: 'pending',
-              user_id: userId
+              user_id: userId,
+              is_active: true
             })
             .select()
             .single();
@@ -59,6 +62,11 @@ export const FileUploader = () => {
             title: "Soubor byl úspěšně nahrán",
             description: "Data byla zpracována a uložena",
           });
+
+          // Přesměrování na detail souboru
+          if (fileData) {
+            navigate(`/${fileData.id}`);
+          }
 
           setUploadProgress(100);
         } catch (err) {
@@ -124,7 +132,7 @@ export const FileUploader = () => {
         description: err instanceof Error ? err.message : "Nastala neočekávaná chyba",
       });
     }
-  }, [toast]);
+  }, [toast, navigate]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,

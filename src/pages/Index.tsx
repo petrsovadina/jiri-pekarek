@@ -5,6 +5,7 @@ import { usePromptManagement } from "@/hooks/usePromptManagement";
 import { useGenerationManagement } from "@/hooks/useGenerationManagement";
 import { useToast } from "@/components/ui/use-toast";
 import { useParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
   const { fileId } = useParams();
@@ -33,27 +34,6 @@ const Index = () => {
     handleGenerateStart,
     handleGenerateStop
   } = useGenerationManagement();
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-gray-500">Načítání dat...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <p className="text-red-500 mb-2">{error}</p>
-          <p className="text-gray-500">
-            Zkontrolujte, zda máte přístup k tomuto souboru a zkuste to znovu
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   const handleExport = () => {
     toast({
@@ -90,6 +70,27 @@ const Index = () => {
       });
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-gray-500">Načítání dat...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-red-500 mb-2">{error}</p>
+          <p className="text-gray-500">
+            Zkontrolujte, zda máte přístup k tomuto souboru a zkuste to znovu
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <TableLayout
