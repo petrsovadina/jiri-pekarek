@@ -26,7 +26,6 @@ const Dashboard = () => {
         return;
       }
       
-      // Fetch files only if user is authenticated
       await fetchFiles();
     };
 
@@ -36,9 +35,19 @@ const Dashboard = () => {
   const fetchFiles = async () => {
     try {
       console.log("Fetching files...");
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        console.log("No authenticated user found");
+        return;
+      }
+
+      console.log("Authenticated user ID:", user.id);
+      
       const { data, error } = await supabase
         .from("files")
         .select("id, name, created_at")
+        .eq('user_id', user.id)
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -55,6 +64,11 @@ const Dashboard = () => {
       setFiles(data || []);
     } catch (error) {
       console.error("Error in fetchFiles:", error);
+      toast({
+        title: "Chyba při načítání",
+        description: "Nepodařilo se načíst seznam souborů",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
@@ -118,7 +132,7 @@ const Dashboard = () => {
             description: "Data byla zpracována a uložena",
           });
 
-          // Refresh the file list
+          // Refresh the file list immediately after successful upload
           await fetchFiles();
 
         } catch (err) {
@@ -128,6 +142,8 @@ const Dashboard = () => {
             title: "Chyba při zpracování",
             description: err instanceof Error ? err.message : "Nastala neočekávaná chyba",
           });
+        } finally {
+          setIsUploading(false);
         }
       };
 
@@ -139,7 +155,6 @@ const Dashboard = () => {
         title: "Chyba při nahrávání",
         description: err instanceof Error ? err.message : "Nastala neočekávaná chyba",
       });
-    } finally {
       setIsUploading(false);
     }
   };
