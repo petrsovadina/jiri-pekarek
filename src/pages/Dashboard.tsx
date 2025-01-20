@@ -25,10 +25,17 @@ const Dashboard = () => {
         navigate("/auth");
         return;
       }
+      
+      // Fetch files only if user is authenticated
+      await fetchFiles();
     };
-    checkAuth();
 
-    const fetchFiles = async () => {
+    checkAuth();
+  }, [navigate]);
+
+  const fetchFiles = async () => {
+    try {
+      console.log("Fetching files...");
       const { data, error } = await supabase
         .from("files")
         .select("id, name, created_at")
@@ -36,103 +43,105 @@ const Dashboard = () => {
 
       if (error) {
         console.error("Error fetching files:", error);
+        toast({
+          title: "Chyba při načítání souborů",
+          description: error.message,
+          variant: "destructive"
+        });
         return;
       }
 
+      console.log("Fetched files:", data);
       setFiles(data || []);
+    } catch (error) {
+      console.error("Error in fetchFiles:", error);
+    } finally {
       setIsLoading(false);
-    };
-
-    fetchFiles();
-  }, [navigate]);
+    }
+  };
 
   const handleFileClick = (fileId: string) => {
     navigate(`/${fileId}`);
   };
 
-  const handleFileUpload = (uploadedFile: File) => {
+  const handleFileUpload = async (uploadedFile: File) => {
     setIsUploading(true);
-    const processFile = async () => {
-      try {
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        
-        if (userError || !user) {
-          throw new Error("Pro nahrání souboru musíte být přihlášeni");
-        }
-
-        const reader = new FileReader();
-        
-        reader.onload = async (e) => {
-          try {
-            const data = e.target?.result;
-            let parsedData;
-            let columns;
-            
-            if (uploadedFile.name.endsWith('.csv')) {
-              const text = data as string;
-              const rows = text.split('\n').map(row => row.split(','));
-              columns = rows[0];
-              parsedData = rows.slice(1);
-            } else {
-              toast({
-                title: "XLSX formát není momentálně podporován",
-                description: "Prosím nahrajte soubor ve formátu CSV",
-                variant: "destructive"
-              });
-              return;
-            }
-
-            const { data: fileData, error: fileError } = await supabase
-              .from('files')
-              .insert({
-                name: uploadedFile.name,
-                original_name: uploadedFile.name,
-                mime_type: uploadedFile.type,
-                size: uploadedFile.size,
-                columns: columns,
-                data: parsedData,
-                status: 'pending',
-                user_id: user.id
-              })
-              .select()
-              .single();
-
-            if (fileError) throw fileError;
-
-            toast({
-              title: "Soubor byl úspěšně nahrán",
-              description: "Data byla zpracována a uložena",
-            });
-
-            const { data: newFiles } = await supabase
-              .from("files")
-              .select("id, name, created_at")
-              .order("created_at", { ascending: false });
-            
-            setFiles(newFiles || []);
-
-          } catch (err) {
-            toast({
-              variant: "destructive",
-              title: "Chyba při zpracování",
-              description: err instanceof Error ? err.message : "Nastala neočekávaná chyba",
-            });
-          }
-        };
-
-        reader.readAsText(uploadedFile);
-      } catch (err) {
-        toast({
-          variant: "destructive",
-          title: "Chyba při nahrávání",
-          description: err instanceof Error ? err.message : "Nastala neočekávaná chyba",
-        });
-      } finally {
-        setIsUploading(false);
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        throw new Error("Pro nahrání souboru musíte být přihlášeni");
       }
-    };
 
-    processFile();
+      const reader = new FileReader();
+      
+      reader.onload = async (e) => {
+        try {
+          const data = e.target?.result;
+          let parsedData;
+          let columns;
+          
+          if (uploadedFile.name.endsWith('.csv')) {
+            const text = data as string;
+            const rows = text.split('\n').map(row => row.split(','));
+            columns = rows[0];
+            parsedData = rows.slice(1);
+          } else {
+            toast({
+              title: "XLSX formát není momentálně podporován",
+              description: "Prosím nahrajte soubor ve formátu CSV",
+              variant: "destructive"
+            });
+            return;
+          }
+
+          const { data: fileData, error: fileError } = await supabase
+            .from('files')
+            .insert({
+              name: uploadedFile.name,
+              original_name: uploadedFile.name,
+              mime_type: uploadedFile.type,
+              size: uploadedFile.size,
+              columns: columns,
+              data: parsedData,
+              status: 'pending',
+              user_id: user.id,
+              is_active: true
+            })
+            .select()
+            .single();
+
+          if (fileError) throw fileError;
+
+          toast({
+            title: "Soubor byl úspěšně nahrán",
+            description: "Data byla zpracována a uložena",
+          });
+
+          // Refresh the file list
+          await fetchFiles();
+
+        } catch (err) {
+          console.error("Error processing file:", err);
+          toast({
+            variant: "destructive",
+            title: "Chyba při zpracování",
+            description: err instanceof Error ? err.message : "Nastala neočekávaná chyba",
+          });
+        }
+      };
+
+      reader.readAsText(uploadedFile);
+    } catch (err) {
+      console.error("Error in handleFileUpload:", err);
+      toast({
+        variant: "destructive",
+        title: "Chyba při nahrávání",
+        description: err instanceof Error ? err.message : "Nastala neočekávaná chyba",
+      });
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (

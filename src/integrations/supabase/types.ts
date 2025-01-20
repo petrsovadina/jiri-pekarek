@@ -16,6 +16,7 @@ export type Database = {
           data: Json | null
           error_message: string | null
           id: string
+          is_active: boolean | null
           mime_type: string
           name: string
           original_name: string
@@ -30,6 +31,7 @@ export type Database = {
           data?: Json | null
           error_message?: string | null
           id?: string
+          is_active?: boolean | null
           mime_type: string
           name: string
           original_name: string
@@ -44,6 +46,7 @@ export type Database = {
           data?: Json | null
           error_message?: string | null
           id?: string
+          is_active?: boolean | null
           mime_type?: string
           name?: string
           original_name?: string
