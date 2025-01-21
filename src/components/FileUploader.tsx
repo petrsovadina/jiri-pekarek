@@ -24,20 +24,22 @@ export const FileUploader = () => {
       reader.onload = async (e) => {
         try {
           const data = e.target?.result;
-          let parsedData;
-          let columns;
+          let parsedData: string[][] = [];
+          let columns: string[] = [];
           
           if (file.name.endsWith('.csv')) {
             const text = data as string;
             const rows = text.split('\n').map(row => row.split(','));
             columns = rows[0];
-            parsedData = rows.slice(1).filter(row => row.some(cell => cell.trim()));
+            parsedData = rows.slice(1).filter(row => row.some(cell => Boolean(cell.trim())));
           } else if (file.name.endsWith('.xlsx')) {
             const workbook = XLSX.read(data, { type: 'binary' });
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
-            columns = jsonData[0];
-            parsedData = jsonData.slice(1).filter(row => row.some(cell => cell));
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as (string | number)[][];
+            columns = jsonData[0].map(String);
+            parsedData = jsonData.slice(1)
+              .filter(row => row.some(cell => Boolean(cell)))
+              .map(row => row.map(String));
           }
 
           const { data: fileData, error: fileError } = await supabase
