@@ -102,9 +102,21 @@ const Index = () => {
     );
   }
 
+  if (!activeFile) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-gray-500">
+            Soubor nebyl nalezen
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <TableLayout
-      fileName={activeFile?.name}
+      fileName={activeFile.name}
       selectedColumn={selectedColumn}
       prompts={prompts}
       onPromptSelect={(promptId) => {
@@ -124,24 +136,16 @@ const Index = () => {
       onExport={handleExport}
       onSave={handleSave}
     >
-      {activeFile ? (
-        <TablePreview
-          headers={activeFile.columns}
-          data={activeFile.data}
-          onHeaderEdit={handleHeaderEdit}
-          onHeaderDelete={handleHeaderDelete}
-          onHeaderAdd={handleHeaderAdd}
-          onHeaderPromptSelect={setSelectedColumn}
-          onCellChange={handleCellChange}
-          selectedColumn={selectedColumn}
-        />
-      ) : (
-        <div className="text-center py-12">
-          <p className="text-gray-500">
-            Nahrajte soubor pro zobrazení dat
-          </p>
-        </div>
-      )}
+      <TablePreview
+        headers={activeFile.columns || []}
+        data={activeFile.data || []}
+        onHeaderEdit={handleHeaderEdit}
+        onHeaderDelete={handleHeaderDelete}
+        onHeaderAdd={handleHeaderAdd}
+        onHeaderPromptSelect={setSelectedColumn}
+        onCellChange={handleCellChange}
+        selectedColumn={selectedColumn}
+      />
     </TableLayout>
   );
 };

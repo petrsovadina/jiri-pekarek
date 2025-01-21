@@ -35,19 +35,12 @@ export const useFileManagement = (fileId?: string) => {
         setError(null);
         console.log("Fetching file data for ID:", fileId);
 
-        const query = supabase
+        const { data: files, error: filesError } = await supabase
           .from("files")
-          .select("*");
-
-        // Pokud máme fileId, načteme konkrétní soubor
-        if (fileId) {
-          query.eq("id", fileId);
-        } else {
-          // Jinak načteme první aktivní soubor
-          query.eq("is_active", true);
-        }
-
-        const { data: files, error: filesError } = await query.limit(1);
+          .select("*")
+          .eq(fileId ? "id" : "is_active", fileId || true)
+          .limit(1)
+          .single();
 
         if (filesError) {
           console.error("Error fetching files:", filesError);
@@ -55,20 +48,18 @@ export const useFileManagement = (fileId?: string) => {
           return;
         }
 
-        if (files && files.length > 0) {
-          const file = files[0];
-          console.log("File loaded:", file);
+        if (files) {
+          console.log("File loaded:", files);
           
           setActiveFile({
-            id: file.id,
-            name: file.name,
-            data: file.data as string[][] || [],
-            columns: file.columns as string[] || []
+            id: files.id,
+            name: files.name,
+            data: files.data as string[][] || [],
+            columns: files.columns as string[] || []
           });
 
-          // Pokud jsme načetli soubor bez fileId, aktualizujeme URL
           if (!fileId) {
-            navigate(`/${file.id}`);
+            navigate(`/${files.id}`);
           }
         } else {
           console.log("No files found");
