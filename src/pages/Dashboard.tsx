@@ -19,30 +19,61 @@ const Dashboard = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+    const checkAuthAndFetchFiles = async () => {
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error("Session error:", sessionError);
+          throw sessionError;
+        }
+
+        if (!session) {
+          navigate("/auth");
+          return;
+        }
+
+        await fetchFiles();
+      } catch (error) {
+        console.error("Auth check error:", error);
+        toast({
+          variant: "destructive",
+          title: "Chyba přihlášení",
+          description: "Prosím, přihlaste se znovu",
+        });
         navigate("/auth");
-        return;
       }
-      
-      await fetchFiles();
     };
 
-    checkAuth();
+    checkAuthAndFetchFiles();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN') {
+        await fetchFiles();
+      } else if (event === 'SIGNED_OUT') {
+        navigate("/auth");
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [navigate]);
 
   const fetchFiles = async () => {
     try {
-      console.log("Fetching files...");
-      const { data: { user } } = await supabase.auth.getUser();
+      setIsLoading(true);
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
       
-      if (!user) {
-        console.log("No authenticated user found");
-        return;
+      if (userError) {
+        throw userError;
       }
 
-      console.log("Authenticated user ID:", user.id);
+      if (!user) {
+        throw new Error("Uživatel není přihlášen");
+      }
+
+      console.log("Fetching files for user:", user.id);
       
       const { data, error } = await supabase
         .from("files")
@@ -51,13 +82,7 @@ const Dashboard = () => {
         .order("created_at", { ascending: false });
 
       if (error) {
-        console.error("Error fetching files:", error);
-        toast({
-          title: "Chyba při načítání souborů",
-          description: error.message,
-          variant: "destructive"
-        });
-        return;
+        throw error;
       }
 
       console.log("Fetched files:", data);
@@ -65,9 +90,9 @@ const Dashboard = () => {
     } catch (error) {
       console.error("Error in fetchFiles:", error);
       toast({
+        variant: "destructive",
         title: "Chyba při načítání",
         description: "Nepodařilo se načíst seznam souborů",
-        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
@@ -97,44 +122,44 @@ const Dashboard = () => {
           
           if (uploadedFile.name.endsWith('.csv')) {
             const text = data as string;
-            const rows = text.split('\n').map(row => row.split(','));
+            const rows = text.split('\n').map(row => 
+              row.trim().split(',').map(cell => cell.trim())
+            ).filter(row => row.length > 0 && row.some(cell => cell !== ''));
+            
             columns = rows[0];
             parsedData = rows.slice(1);
+
+            const { data: fileData, error: fileError } = await supabase
+              .from('files')
+              .insert({
+                name: uploadedFile.name,
+                original_name: uploadedFile.name,
+                mime_type: uploadedFile.type,
+                size: uploadedFile.size,
+                columns: columns,
+                data: parsedData,
+                status: 'pending',
+                user_id: user.id,
+                is_active: true
+              })
+              .select()
+              .single();
+
+            if (fileError) throw fileError;
+
+            toast({
+              title: "Soubor byl úspěšně nahrán",
+              description: "Data byla zpracována a uložena",
+            });
+
+            await fetchFiles();
           } else {
             toast({
-              title: "XLSX formát není momentálně podporován",
+              variant: "destructive",
+              title: "Nepodporovaný formát",
               description: "Prosím nahrajte soubor ve formátu CSV",
-              variant: "destructive"
             });
-            return;
           }
-
-          const { data: fileData, error: fileError } = await supabase
-            .from('files')
-            .insert({
-              name: uploadedFile.name,
-              original_name: uploadedFile.name,
-              mime_type: uploadedFile.type,
-              size: uploadedFile.size,
-              columns: columns,
-              data: parsedData,
-              status: 'pending',
-              user_id: user.id,
-              is_active: true
-            })
-            .select()
-            .single();
-
-          if (fileError) throw fileError;
-
-          toast({
-            title: "Soubor byl úspěšně nahrán",
-            description: "Data byla zpracována a uložena",
-          });
-
-          // Refresh the file list immediately after successful upload
-          await fetchFiles();
-
         } catch (err) {
           console.error("Error processing file:", err);
           toast({
@@ -145,6 +170,15 @@ const Dashboard = () => {
         } finally {
           setIsUploading(false);
         }
+      };
+
+      reader.onerror = () => {
+        toast({
+          variant: "destructive",
+          title: "Chyba při čtení souboru",
+          description: "Nepodařilo se přečíst obsah souboru",
+        });
+        setIsUploading(false);
       };
 
       reader.readAsText(uploadedFile);
