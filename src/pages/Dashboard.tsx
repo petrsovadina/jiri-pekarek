@@ -19,7 +19,7 @@ const Dashboard = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    const checkAuthAndFetchFiles = async () => {
+    const initializeAuth = async () => {
       try {
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
@@ -33,9 +33,10 @@ const Dashboard = () => {
           return;
         }
 
+        console.log("Authenticated user ID:", session.user.id);
         await fetchFiles();
       } catch (error) {
-        console.error("Auth check error:", error);
+        console.error("Auth initialization error:", error);
         toast({
           variant: "destructive",
           title: "Chyba přihlášení",
@@ -45,12 +46,15 @@ const Dashboard = () => {
       }
     };
 
-    checkAuthAndFetchFiles();
+    initializeAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN') {
+      console.log("Auth state changed:", event);
+      if (event === 'SIGNED_IN' && session) {
+        console.log("User signed in:", session.user.id);
         await fetchFiles();
       } else if (event === 'SIGNED_OUT') {
+        console.log("User signed out");
         navigate("/auth");
       }
     });
@@ -58,23 +62,25 @@ const Dashboard = () => {
     return () => {
       subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, [navigate, toast]);
 
   const fetchFiles = async () => {
     try {
+      console.log("Fetching files...");
       setIsLoading(true);
+      
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
       if (userError) {
+        console.error("User error:", userError);
         throw userError;
       }
 
       if (!user) {
+        console.error("No authenticated user found");
         throw new Error("Uživatel není přihlášen");
       }
 
-      console.log("Fetching files for user:", user.id);
-      
       const { data, error } = await supabase
         .from("files")
         .select("id, name, created_at")
@@ -82,6 +88,7 @@ const Dashboard = () => {
         .order("created_at", { ascending: false });
 
       if (error) {
+        console.error("Files fetch error:", error);
         throw error;
       }
 
@@ -100,7 +107,7 @@ const Dashboard = () => {
   };
 
   const handleFileClick = (fileId: string) => {
-    navigate(`/${fileId}`);
+    navigate(`/table/${fileId}`);
   };
 
   const handleFileUpload = async (uploadedFile: File) => {
@@ -117,19 +124,24 @@ const Dashboard = () => {
       reader.onload = async (e) => {
         try {
           const data = e.target?.result;
+          if (!data) {
+            throw new Error("Nepodařilo se načíst obsah souboru");
+          }
+
           let parsedData;
           let columns;
           
           if (uploadedFile.name.endsWith('.csv')) {
             const text = data as string;
-            const rows = text.split('\n').map(row => 
-              row.trim().split(',').map(cell => cell.trim())
-            ).filter(row => row.length > 0 && row.some(cell => cell !== ''));
+            const rows = text.split('\n')
+              .map(row => row.trim())
+              .filter(row => row.length > 0)
+              .map(row => row.split(',').map(cell => cell.trim()));
             
             columns = rows[0];
-            parsedData = rows.slice(1);
+            parsedData = rows.slice(1).filter(row => row.some(cell => cell !== ''));
 
-            const { data: fileData, error: fileError } = await supabase
+            const { error: fileError } = await supabase
               .from('files')
               .insert({
                 name: uploadedFile.name,
@@ -141,9 +153,7 @@ const Dashboard = () => {
                 status: 'pending',
                 user_id: user.id,
                 is_active: true
-              })
-              .select()
-              .single();
+              });
 
             if (fileError) throw fileError;
 
