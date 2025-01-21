@@ -3,7 +3,7 @@ import { TableLayout } from "@/components/table/TableLayout";
 import { useFileManagement } from "@/hooks/useFileManagement";
 import { usePromptManagement } from "@/hooks/usePromptManagement";
 import { useGenerationManagement } from "@/hooks/useGenerationManagement";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -74,9 +74,9 @@ const Index = () => {
     } catch (error) {
       console.error("Error saving changes:", error);
       toast({
+        variant: "destructive",
         title: "Chyba při ukládání",
         description: "Nepodařilo se uložit změny",
-        variant: "destructive"
       });
     }
   };

@@ -1,11 +1,11 @@
 import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
-import { Upload, FileType, X } from "lucide-react";
+import { Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import * as XLSX from 'xlsx';
 import { useNavigate } from "react-router-dom";
@@ -31,13 +31,13 @@ export const FileUploader = () => {
             const text = data as string;
             const rows = text.split('\n').map(row => row.split(','));
             columns = rows[0];
-            parsedData = rows.slice(1);
+            parsedData = rows.slice(1).filter(row => row.some(cell => cell.trim()));
           } else if (file.name.endsWith('.xlsx')) {
             const workbook = XLSX.read(data, { type: 'binary' });
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
             const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
             columns = jsonData[0];
-            parsedData = jsonData.slice(1);
+            parsedData = jsonData.slice(1).filter(row => row.some(cell => cell));
           }
 
           const { data: fileData, error: fileError } = await supabase
@@ -63,9 +63,8 @@ export const FileUploader = () => {
             description: "Data byla zpracována a uložena",
           });
 
-          // Přesměrování na detail souboru
           if (fileData) {
-            navigate(`/${fileData.id}`);
+            navigate(`/table/${fileData.id}`);
           }
 
           setUploadProgress(100);
@@ -106,19 +105,16 @@ export const FileUploader = () => {
     setUploadProgress(0);
 
     try {
-      // Get current user
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
       if (userError || !user) {
         throw new Error("Pro nahrání souboru musíte být přihlášeni");
       }
 
-      // Validate file type
       if (!file.name.match(/\.(csv|xlsx)$/i)) {
         throw new Error("Prosím nahrajte soubor typu CSV nebo XLSX");
       }
 
-      // Validate file size (max 10MB)
       if (file.size > 10 * 1024 * 1024) {
         throw new Error("Soubor je příliš velký. Maximální velikost je 10MB");
       }
