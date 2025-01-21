@@ -36,6 +36,16 @@ const Index = () => {
   } = useGenerationManagement();
 
   const handleExport = () => {
+    if (!activeFile?.data) {
+      toast({
+        variant: "destructive",
+        title: "Chyba při exportu",
+        description: "Nejsou k dispozici žádná data pro export",
+      });
+      return;
+    }
+
+    // TODO: Implementovat export dat
     toast({
       title: "Export",
       description: "Funkce exportu bude brzy implementována",
