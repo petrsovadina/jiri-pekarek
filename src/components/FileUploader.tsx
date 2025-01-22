@@ -1,102 +1,24 @@
 import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
-import { Upload, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Upload } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import * as XLSX from 'xlsx';
 import { useNavigate } from "react-router-dom";
+import { useFileProcessor } from "@/hooks/useFileProcessor";
+import { validateFile } from "./FileValidator";
 
 export const FileUploader = () => {
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const { toast } = useToast();
   const navigate = useNavigate();
-
-  const processFile = async (file: File, userId: string) => {
-    try {
-      const reader = new FileReader();
-      
-      reader.onload = async (e) => {
-        try {
-          const data = e.target?.result;
-          let parsedData: string[][] = [];
-          let columns: string[] = [];
-          
-          if (file.name.endsWith('.csv')) {
-            const text = data as string;
-            const rows = text.split('\n').map(row => row.split(','));
-            columns = rows[0];
-            parsedData = rows.slice(1).filter(row => row.some(cell => Boolean(cell.trim())));
-          } else if (file.name.endsWith('.xlsx')) {
-            const workbook = XLSX.read(data, { type: 'binary' });
-            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as (string | number)[][];
-            columns = jsonData[0].map(String);
-            parsedData = jsonData.slice(1)
-              .filter(row => row.some(cell => Boolean(cell)))
-              .map(row => row.map(String));
-          }
-
-          const { data: fileData, error: fileError } = await supabase
-            .from('files')
-            .insert({
-              name: file.name,
-              original_name: file.name,
-              mime_type: file.type,
-              size: file.size,
-              columns: columns,
-              data: parsedData,
-              status: 'pending',
-              user_id: userId,
-              is_active: true
-            })
-            .select()
-            .single();
-
-          if (fileError) throw fileError;
-
-          toast({
-            title: "Soubor byl úspěšně nahrán",
-            description: "Data byla zpracována a uložena",
-          });
-
-          if (fileData) {
-            navigate(`/table/${fileData.id}`);
-          }
-
-          setUploadProgress(100);
-        } catch (err) {
-          setError(err instanceof Error ? err.message : "Nastala neočekávaná chyba");
-          toast({
-            variant: "destructive",
-            title: "Chyba při zpracování",
-            description: err instanceof Error ? err.message : "Nastala neočekávaná chyba",
-          });
-        }
-      };
-
-      reader.onprogress = (event) => {
-        if (event.lengthComputable) {
-          setUploadProgress((event.loaded / event.total) * 100);
-        }
-      };
-
-      if (file.name.endsWith('.csv')) {
-        reader.readAsText(file);
-      } else {
-        reader.readAsBinaryString(file);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Nastala neočekávaná chyba");
-    } finally {
-      setIsUploading(false);
+  
+  const { uploadProgress, processFile } = useFileProcessor({
+    onSuccess: (fileId) => {
+      navigate(`/${fileId}`);
     }
-  };
+  });
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return;
@@ -104,7 +26,6 @@ export const FileUploader = () => {
     const file = acceptedFiles[0];
     setIsUploading(true);
     setError(null);
-    setUploadProgress(0);
 
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -113,24 +34,17 @@ export const FileUploader = () => {
         throw new Error("Pro nahrání souboru musíte být přihlášeni");
       }
 
-      if (!file.name.match(/\.(csv|xlsx)$/i)) {
-        throw new Error("Prosím nahrajte soubor typu CSV nebo XLSX");
-      }
-
-      if (file.size > 10 * 1024 * 1024) {
-        throw new Error("Soubor je příliš velký. Maximální velikost je 10MB");
+      if (!validateFile({ file })) {
+        return;
       }
 
       await processFile(file, user.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Nastala neočekávaná chyba");
-      toast({
-        variant: "destructive",
-        title: "Chyba při nahrávání",
-        description: err instanceof Error ? err.message : "Nastala neočekávaná chyba",
-      });
+    } finally {
+      setIsUploading(false);
     }
-  }, [toast, navigate]);
+  }, [processFile, navigate]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
