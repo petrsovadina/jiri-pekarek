@@ -1,11 +1,12 @@
-import { TablePreview } from "@/components/TablePreview";
 import { TableLayout } from "@/components/table/TableLayout";
+import { TableContainer } from "@/components/table/TableContainer";
+import { LoadingState } from "@/components/table/LoadingState";
+import { ErrorState } from "@/components/table/ErrorState";
 import { useFileManagement } from "@/hooks/useFileManagement";
 import { usePromptManagement } from "@/hooks/usePromptManagement";
 import { useGenerationManagement } from "@/hooks/useGenerationManagement";
 import { useToast } from "@/hooks/use-toast";
 import { useParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
   const { fileId } = useParams();
@@ -45,78 +46,23 @@ const Index = () => {
       return;
     }
 
-    // TODO: Implementovat export dat
     toast({
       title: "Export",
       description: "Funkce exportu bude brzy implementována",
     });
   };
 
-  const handleSave = async () => {
-    if (!activeFile) return;
-
-    try {
-      const { error } = await supabase
-        .from("files")
-        .update({ 
-          data: activeFile.data,
-          columns: activeFile.columns,
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", activeFile.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Změny uloženy",
-        description: "Všechny změny byly úspěšně uloženy",
-      });
-    } catch (error) {
-      console.error("Error saving changes:", error);
-      toast({
-        variant: "destructive",
-        title: "Chyba při ukládání",
-        description: "Nepodařilo se uložit změny",
-      });
-    }
-  };
-
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-gray-500">Načítání dat...</p>
-      </div>
-    );
+    return <LoadingState />;
   }
 
   if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <p className="text-red-500 mb-2">{error}</p>
-          <p className="text-gray-500">
-            Zkontrolujte, zda máte přístup k tomuto souboru a zkuste to znovu
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!activeFile) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <p className="text-gray-500">
-            Soubor nebyl nalezen
-          </p>
-        </div>
-      </div>
-    );
+    return <ErrorState error={error} />;
   }
 
   return (
     <TableLayout
-      fileName={activeFile.name}
+      fileName={activeFile?.name || ""}
       selectedColumn={selectedColumn}
       prompts={prompts}
       onPromptSelect={(promptId) => {
@@ -134,17 +80,15 @@ const Index = () => {
       isGenerating={isGenerating}
       progress={progress}
       onExport={handleExport}
-      onSave={handleSave}
     >
-      <TablePreview
-        headers={activeFile.columns || []}
-        data={activeFile.data || []}
+      <TableContainer
+        activeFile={activeFile}
+        selectedColumn={selectedColumn}
         onHeaderEdit={handleHeaderEdit}
         onHeaderDelete={handleHeaderDelete}
         onHeaderAdd={handleHeaderAdd}
         onHeaderPromptSelect={setSelectedColumn}
         onCellChange={handleCellChange}
-        selectedColumn={selectedColumn}
       />
     </TableLayout>
   );
