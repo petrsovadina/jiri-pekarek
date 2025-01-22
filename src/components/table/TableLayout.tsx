@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { TableHeader } from "./TableHeader";
+import { TableLayoutHeader } from "./TableLayoutHeader";
 import { TableSidebar } from "../TableSidebar";
 
 interface TableLayoutProps {
@@ -34,7 +34,7 @@ export const TableLayout = ({
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-[1600px] mx-auto px-4 py-6">
-        <TableHeader
+        <TableLayoutHeader
           fileName={fileName}
           onExport={onExport}
           onSave={onSave}
