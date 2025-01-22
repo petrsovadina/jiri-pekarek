@@ -15,6 +15,7 @@ interface TableContainerProps {
   onHeaderAdd: (header: string) => void;
   onHeaderPromptSelect: (header: string) => void;
   onCellChange: (rowIndex: number, columnIndex: number, value: string) => void;
+  onSave?: () => void;
 }
 
 export const TableContainer = ({
@@ -24,7 +25,8 @@ export const TableContainer = ({
   onHeaderDelete,
   onHeaderAdd,
   onHeaderPromptSelect,
-  onCellChange
+  onCellChange,
+  onSave: externalOnSave
 }: TableContainerProps) => {
   const { toast } = useToast();
 
@@ -47,6 +49,10 @@ export const TableContainer = ({
         title: "Změny uloženy",
         description: "Všechny změny byly úspěšně uloženy",
       });
+
+      if (externalOnSave) {
+        externalOnSave();
+      }
     } catch (error) {
       console.error("Error saving changes:", error);
       toast({

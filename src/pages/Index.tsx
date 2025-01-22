@@ -52,6 +52,13 @@ const Index = () => {
     });
   };
 
+  const handleSave = () => {
+    toast({
+      title: "Ukládání",
+      description: "Změny byly úspěšně uloženy",
+    });
+  };
+
   if (isLoading) {
     return <LoadingState />;
   }
@@ -80,6 +87,7 @@ const Index = () => {
       isGenerating={isGenerating}
       progress={progress}
       onExport={handleExport}
+      onSave={handleSave}
     >
       <TableContainer
         activeFile={activeFile}
@@ -89,6 +97,7 @@ const Index = () => {
         onHeaderAdd={handleHeaderAdd}
         onHeaderPromptSelect={setSelectedColumn}
         onCellChange={handleCellChange}
+        onSave={handleSave}
       />
     </TableLayout>
   );
