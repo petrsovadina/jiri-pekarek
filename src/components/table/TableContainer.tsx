@@ -1,6 +1,7 @@
 import { TablePreview } from "@/components/TablePreview";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Loader2 } from "lucide-react";
 
 interface TableContainerProps {
   activeFile: {
@@ -16,6 +17,7 @@ interface TableContainerProps {
   onHeaderPromptSelect: (header: string) => void;
   onCellChange: (rowIndex: number, columnIndex: number, value: string) => void;
   onSave?: () => void;
+  isLoading?: boolean;
 }
 
 export const TableContainer = ({
@@ -26,7 +28,8 @@ export const TableContainer = ({
   onHeaderAdd,
   onHeaderPromptSelect,
   onCellChange,
-  onSave: externalOnSave
+  onSave: externalOnSave,
+  isLoading
 }: TableContainerProps) => {
   const { toast } = useToast();
 
@@ -63,12 +66,20 @@ export const TableContainer = ({
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   if (!activeFile) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <p className="text-gray-500">
-            Soubor nebyl nalezen
+            Tabulka nebyla nalezena nebo nemáte oprávnění k jejímu zobrazení
           </p>
         </div>
       </div>
