@@ -9,12 +9,18 @@ import { supabase } from "@/integrations/supabase/client";
 
 function App() {
   useEffect(() => {
-    // Nastavení CORS pro Supabase
-    supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN') {
         console.log('Přihlášený uživatel:', session?.user?.id);
       }
+      if (event === 'SIGNED_OUT') {
+        console.log('Uživatel odhlášen');
+      }
     });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   return (
