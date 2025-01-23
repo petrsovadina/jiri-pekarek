@@ -35,12 +35,19 @@ export const useFileManagement = (fileId?: string) => {
         setError(null);
         console.log("Fetching file data for ID:", fileId);
 
-        const { data: files, error: filesError } = await supabase
+        // Pokud fileId není definováno nebo je neplatné, načteme aktivní soubor
+        const query = supabase
           .from("files")
-          .select("*")
-          .eq(fileId ? "id" : "is_active", fileId || true)
-          .limit(1)
-          .single();
+          .select("*");
+
+        // Pokud máme fileId a vypadá jako UUID, použijeme ho pro filtrování
+        if (fileId && fileId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+          query.eq("id", fileId);
+        } else {
+          query.eq("is_active", true);
+        }
+
+        const { data: files, error: filesError } = await query.limit(1).maybeSingle();
 
         if (filesError) {
           console.error("Error fetching files:", filesError);
