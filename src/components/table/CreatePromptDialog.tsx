@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
+import { PromptEditor } from "@/components/PromptEditor";
 
 interface CreatePromptDialogProps {
   open: boolean;
@@ -15,8 +14,7 @@ export const CreatePromptDialog = ({ open, onClose, onSave }: CreatePromptDialog
   const [name, setName] = useState("");
   const [content, setContent] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = () => {
     if (name.trim() && content.trim()) {
       onSave(name.trim(), content.trim());
       setName("");
@@ -31,37 +29,31 @@ export const CreatePromptDialog = ({ open, onClose, onSave }: CreatePromptDialog
         <DialogHeader>
           <DialogTitle>Vytvořit nový prompt</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Název promptu</Label>
+            <label htmlFor="name" className="text-sm font-medium">
+              Název promptu
+            </label>
             <Input
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Zadejte název promptu"
-              className="w-full"
+              placeholder="Zadejte název promptu..."
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="content">Text promptu</Label>
-            <div className="text-sm text-muted-foreground mb-2">
-              Použijte {"{columnName}"} pro reference na hodnoty z jiných sloupců.
-            </div>
-            <Textarea
-              id="content"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Zadejte text promptu..."
-              className="min-h-[150px] resize-none"
-            />
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
+          <PromptEditor
+            onSave={(prompt) => setContent(prompt)}
+            initialPrompt={content}
+          />
+          <div className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={onClose}>
               Zrušit
             </Button>
-            <Button type="submit">Uložit prompt</Button>
-          </DialogFooter>
-        </form>
+            <Button onClick={handleSave}>
+              Uložit prompt
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
