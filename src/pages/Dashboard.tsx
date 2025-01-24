@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { FileGrid } from "@/components/dashboard/FileGrid";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { ProfileSettings } from "@/components/profile/ProfileSettings";
 import { useDashboardFiles } from "@/hooks/useDashboardFiles";
 import { useFileUpload } from "@/hooks/useFileUpload";
 
@@ -49,15 +50,18 @@ const Dashboard = () => {
 
   return (
     <DashboardLayout>
-      <DashboardHeader 
-        onFileUpload={handleFileUpload}
-        isUploading={isUploading}
-      />
-      <FileGrid 
-        files={files}
-        onFileClick={handleFileClick}
-        isLoading={isLoading}
-      />
+      <div className="space-y-8">
+        <DashboardHeader 
+          onFileUpload={handleFileUpload}
+          isUploading={isUploading}
+        />
+        <FileGrid 
+          files={files}
+          onFileClick={handleFileClick}
+          isLoading={isLoading}
+        />
+        <ProfileSettings />
+      </div>
     </DashboardLayout>
   );
 };
