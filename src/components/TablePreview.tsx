@@ -46,14 +46,14 @@ export const TablePreview = ({
 
   return (
     <div className="rounded-md border animate-fade-in">
-      <ScrollArea className="h-[calc(100vh-12rem)]">
+      <ScrollArea className="h-[500px]">
         <Table>
           <TableHeader>
             <TableRow>
               {headers.map((header) => (
                 <TableHead 
                   key={header} 
-                  className={`min-w-[150px] ${selectedColumn === header ? 'bg-primary/10' : ''} transition-colors`}
+                  className={`min-w-[150px] ${selectedColumn === header ? 'bg-primary/10' : ''}`}
                 >
                   <div className="flex items-center gap-2">
                     {editingHeader === header ? (
@@ -67,12 +67,12 @@ export const TablePreview = ({
                       />
                     ) : (
                       <>
-                        <span className="flex-1">{header}</span>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span>{header}</span>
+                        <div className="flex gap-1">
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6 hover:bg-primary/20"
+                            className="h-6 w-6"
                             onClick={() => handleHeaderEdit(header)}
                           >
                             <Pencil className="h-4 w-4" />
@@ -80,7 +80,7 @@ export const TablePreview = ({
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6 hover:bg-primary/20"
+                            className="h-6 w-6"
                             onClick={() => onHeaderPromptSelect(header)}
                           >
                             <MessageSquare className="h-4 w-4" />
@@ -88,7 +88,7 @@ export const TablePreview = ({
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6 text-destructive hover:bg-destructive/20"
+                            className="h-6 w-6 text-destructive"
                             onClick={() => onHeaderDelete(header)}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -103,7 +103,7 @@ export const TablePreview = ({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 hover:bg-primary/20"
+                  className="h-8 w-8"
                   onClick={() => setIsAddColumnDialogOpen(true)}
                 >
                   <Plus className="h-4 w-4" />
@@ -113,7 +113,7 @@ export const TablePreview = ({
           </TableHeader>
           <TableBody>
             {data.map((row, rowIndex) => (
-              <TableRow key={rowIndex} className="hover:bg-muted/50">
+              <TableRow key={rowIndex}>
                 {row.map((cell, colIndex) => (
                   <EditableTableCell
                     key={`${rowIndex}-${colIndex}`}

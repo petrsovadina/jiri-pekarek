@@ -36,7 +36,7 @@ export const TableSidebar = ({
   };
 
   return (
-    <div className="w-80 border-l animate-slide-in-right">
+    <div className="w-80 border-l">
       <div className="p-4 space-y-4">
         <Card className="p-4">
           <h3 className="text-lg font-semibold mb-4">Nastavení promptu</h3>
@@ -56,7 +56,6 @@ export const TableSidebar = ({
                     variant="ghost"
                     size="sm"
                     onClick={() => setIsCreatePromptDialogOpen(true)}
-                    className="hover:bg-primary/20"
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Nový prompt
@@ -95,7 +94,7 @@ export const TableSidebar = ({
                       <span>Generování dat...</span>
                       <span>{Math.round(progress)}%</span>
                     </div>
-                    <Progress value={progress} className="h-2" />
+                    <Progress value={progress} />
                   </div>
                   <Button 
                     variant="destructive" 
@@ -108,7 +107,7 @@ export const TableSidebar = ({
                 </>
               ) : (
                 <Button 
-                  className="w-full bg-primary hover:bg-primary/90"
+                  className="w-full"
                   onClick={onGenerateStart}
                 >
                   <Play className="h-4 w-4 mr-2" />

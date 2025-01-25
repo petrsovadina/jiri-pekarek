@@ -27,7 +27,7 @@ export const CreatePromptDialog = ({ open, onClose, onSave }: CreatePromptDialog
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Vytvořit nový prompt</DialogTitle>
         </DialogHeader>
@@ -39,20 +39,16 @@ export const CreatePromptDialog = ({ open, onClose, onSave }: CreatePromptDialog
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Zadejte název promptu"
-              className="w-full"
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="content">Text promptu</Label>
-            <div className="text-sm text-muted-foreground mb-2">
-              Použijte {"{columnName}"} pro reference na hodnoty z jiných sloupců.
-            </div>
             <Textarea
               id="content"
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="Zadejte text promptu..."
-              className="min-h-[150px] resize-none"
+              placeholder="Zadejte text promptu. Použijte {columnName} pro reference na hodnoty z jiných sloupců."
+              className="min-h-[150px]"
             />
           </div>
           <DialogFooter>

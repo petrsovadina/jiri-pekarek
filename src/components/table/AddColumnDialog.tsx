@@ -27,7 +27,7 @@ export const AddColumnDialog = ({ open, onClose, onAdd }: AddColumnDialogProps) 
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Přidat nový sloupec</DialogTitle>
         </DialogHeader>
@@ -39,7 +39,6 @@ export const AddColumnDialog = ({ open, onClose, onAdd }: AddColumnDialogProps) 
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Zadejte název sloupce"
-              className="w-full"
             />
           </div>
           <div className="space-y-2">
