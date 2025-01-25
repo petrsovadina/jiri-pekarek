@@ -1,26 +1,20 @@
+import { TablePreview } from "@/components/TablePreview";
 import { TableLayout } from "@/components/table/TableLayout";
-import { TableContainer } from "@/components/table/TableContainer";
-import { LoadingState } from "@/components/table/LoadingState";
-import { ErrorState } from "@/components/table/ErrorState";
 import { useFileManagement } from "@/hooks/useFileManagement";
 import { usePromptManagement } from "@/hooks/usePromptManagement";
 import { useGenerationManagement } from "@/hooks/useGenerationManagement";
-import { useToast } from "@/hooks/use-toast";
-import { useParams } from "react-router-dom";
+import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
-  const { fileId } = useParams();
   const { toast } = useToast();
-  
   const { 
     activeFile,
-    isLoading,
-    error,
     handleHeaderEdit,
     handleHeaderDelete,
     handleHeaderAdd,
     handleCellChange
-  } = useFileManagement(fileId);
+  } = useFileManagement();
 
   const {
     prompts,
@@ -37,39 +31,44 @@ const Index = () => {
   } = useGenerationManagement();
 
   const handleExport = () => {
-    if (!activeFile?.data) {
-      toast({
-        variant: "destructive",
-        title: "Chyba při exportu",
-        description: "Nejsou k dispozici žádná data pro export",
-      });
-      return;
-    }
-
     toast({
       title: "Export",
       description: "Funkce exportu bude brzy implementována",
     });
   };
 
-  const handleSave = () => {
-    toast({
-      title: "Ukládání",
-      description: "Změny byly úspěšně uloženy",
-    });
+  const handleSave = async () => {
+    if (!activeFile) return;
+
+    try {
+      const { error } = await supabase
+        .from("files")
+        .update({ 
+          data: activeFile.data,
+          columns: activeFile.columns,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", activeFile.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Změny uloženy",
+        description: "Všechny změny byly úspěšně uloženy",
+      });
+    } catch (error) {
+      console.error("Error saving changes:", error);
+      toast({
+        title: "Chyba při ukládání",
+        description: "Nepodařilo se uložit změny",
+        variant: "destructive"
+      });
+    }
   };
-
-  if (isLoading) {
-    return <LoadingState />;
-  }
-
-  if (error) {
-    return <ErrorState error={error} />;
-  }
 
   return (
     <TableLayout
-      fileName={activeFile?.name || ""}
+      fileName={activeFile?.name}
       selectedColumn={selectedColumn}
       prompts={prompts}
       onPromptSelect={(promptId) => {
@@ -89,16 +88,24 @@ const Index = () => {
       onExport={handleExport}
       onSave={handleSave}
     >
-      <TableContainer
-        activeFile={activeFile}
-        selectedColumn={selectedColumn}
-        onHeaderEdit={handleHeaderEdit}
-        onHeaderDelete={handleHeaderDelete}
-        onHeaderAdd={handleHeaderAdd}
-        onHeaderPromptSelect={setSelectedColumn}
-        onCellChange={handleCellChange}
-        onSave={handleSave}
-      />
+      {activeFile ? (
+        <TablePreview
+          headers={activeFile.columns}
+          data={activeFile.data}
+          onHeaderEdit={handleHeaderEdit}
+          onHeaderDelete={handleHeaderDelete}
+          onHeaderAdd={handleHeaderAdd}
+          onHeaderPromptSelect={setSelectedColumn}
+          onCellChange={handleCellChange}
+          selectedColumn={selectedColumn}
+        />
+      ) : (
+        <div className="text-center py-12">
+          <p className="text-gray-500">
+            Nahrajte soubor pro zobrazení dat
+          </p>
+        </div>
+      )}
     </TableLayout>
   );
 };
