@@ -3,9 +3,8 @@
 import { useState, useCallback } from "react"
 import { useDropzone } from "react-dropzone"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { AlertCircle, FileSpreadsheet, CheckCircle } from 'lucide-react'
+import { AlertCircle, CheckCircle } from 'lucide-react'
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import Papa from "papaparse"
 import * as XLSX from "xlsx"
@@ -51,8 +50,9 @@ export function TableUploader({ onUpload }: TableUploaderProps) {
             setError(error.message)
             setIsUploading(false)
           },
-          step: (results, parser) => {
-            updateProgress((parser.handled / parser.total) * 100)
+          step: () => {
+            // Simulujeme progress, protože Papa Parse neposkytuje spolehlivý způsob sledování progressu
+            setUploadProgress((prev) => Math.min(prev + 10, 90))
           },
         })
       } else if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
@@ -67,7 +67,7 @@ export function TableUploader({ onUpload }: TableUploaderProps) {
             onUpload({ data: jsonData })
             setIsUploading(false)
             setSuccess(true)
-          } catch (error) {
+          } catch {
             setError(intl.formatMessage({ id: "app.fileReadError" }))
             setIsUploading(false)
           }
@@ -137,7 +137,7 @@ export function TableUploader({ onUpload }: TableUploaderProps) {
             </Alert>
           )}
           {success && (
-            <Alert variant="success" className="mt-4">
+            <Alert variant="default" className="mt-4">
               <CheckCircle className="h-4 w-4 mr-2" />
               <AlertDescription>{intl.formatMessage({ id: "app.fileUploadedSuccessfully" })}</AlertDescription>
             </Alert>

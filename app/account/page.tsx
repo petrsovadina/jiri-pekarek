@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useToast } from "@/components/ui/use-toast"
 import { Navigation } from "@/components/Navigation"
 import { Footer } from "@/components/Footer"
 import { ApiKeyManager } from "@/components/ApiKeyManager"
@@ -14,7 +13,6 @@ import { ApiKeyManager } from "@/components/ApiKeyManager"
 export default function AccountPage() {
   const [email, setEmail] = useState("")
   const router = useRouter()
-  const { toast } = useToast()
 
   useEffect(() => {
     const userEmail = localStorage.getItem("userEmail")

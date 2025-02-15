@@ -24,7 +24,11 @@ export function Notifications({ notifications, onNotificationDismiss }: Notifica
         title: notification.type.charAt(0).toUpperCase() + notification.type.slice(1),
         description: notification.message,
         variant: notification.type === "error" ? "destructive" : "default",
-        onDismiss: () => onNotificationDismiss(index),
+        onOpenChange: (open) => {
+          if (!open) {
+            onNotificationDismiss(index)
+          }
+        },
       })
     })
   }, [notifications, onNotificationDismiss, toast])

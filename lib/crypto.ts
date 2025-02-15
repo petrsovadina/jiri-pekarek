@@ -6,7 +6,8 @@ if (!ENCRYPTION_KEY) {
 
 // Helper function to convert ArrayBuffer to Base64
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  return btoa(String.fromCharCode.apply(null, new Uint8Array(buffer) as any))
+  const array = new Uint8Array(buffer)
+  return btoa(String.fromCharCode.apply(null, Array.from(array)))
 }
 
 // Helper function to convert Base64 to ArrayBuffer

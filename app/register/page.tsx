@@ -45,7 +45,7 @@ export default function RegisterPage() {
       })
 
       router.push("/account")
-    } catch (error) {
+    } catch {
       toast({
         title: "Chyba při registraci",
         description: "Zkuste to prosím znovu",

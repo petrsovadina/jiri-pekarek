@@ -70,7 +70,7 @@ export function ExternalTableManager({ onTablesUpdate }: ExternalTableManagerPro
         title: intl.formatMessage({ id: "app.externalTableAdded" }),
         description: intl.formatMessage({ id: "app.externalTableAddedDescription" }),
       })
-    } catch (error) {
+    } catch {
       toast({
         title: intl.formatMessage({ id: "app.error" }),
         description: intl.formatMessage({ id: "app.externalTableFetchError" }),

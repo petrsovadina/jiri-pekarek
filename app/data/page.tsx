@@ -42,7 +42,6 @@ export default function DataPage() {
                 columns={columns}
                 selectedColumn={null}
                 onColumnSelect={() => {}}
-                invalidCells={{}}
                 onDataUpdate={() => {}}
               />
             </CardContent>

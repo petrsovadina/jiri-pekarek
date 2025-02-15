@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useMemo } from "react"
+import { useState, useMemo, useRef } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -38,11 +38,7 @@ export function DataTable({ data, columns, selectedColumn, onColumnSelect, onDat
     return result
   }, [data, searchTerm, sortColumn, sortDirection])
 
-  const parentRef = useCallback((node: HTMLDivElement | null) => {
-    if (node !== null) {
-      parentRef.current = node
-    }
-  }, [])
+  const parentRef = useRef<HTMLDivElement | null>(null)
 
   const rowVirtualizer = useVirtualizer({
     count: filteredAndSortedData.length,
@@ -59,8 +55,9 @@ export function DataTable({ data, columns, selectedColumn, onColumnSelect, onDat
 
   const handleDeleteColumn = (columnToDelete: string) => {
     const newData = data.map((row) => {
-      const { [columnToDelete]: _, ...rest } = row
-      return rest
+      const newRow = { ...row }
+      delete newRow[columnToDelete]
+      return newRow
     })
     onDataUpdate(newData)
   }

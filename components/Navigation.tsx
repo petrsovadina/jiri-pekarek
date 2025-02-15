@@ -10,7 +10,6 @@ import { intl } from "@/lib/i18n"
 import { Toggle } from "@/components/ui/toggle"
 
 export function Navigation() {
-  const [isOpen, setIsOpen] = useState(false)
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -29,14 +29,11 @@ interface DataValidatorProps {
 export function DataValidator({ data, columns, onInvalidData }: DataValidatorProps) {
   const [validationRules, setValidationRules] = useState<ValidationRule[]>([])
   const [newRule, setNewRule] = useState<ValidationRule>({ column: "", type: "required" })
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [invalidData, setInvalidData] = useState<{ [key: string]: boolean }>({})
   const { toast } = useToast()
 
-  useEffect(() => {
-    validateData()
-  }, [data, validationRules])
-
-  const validateData = () => {
+  const validateData = useCallback(() => {
     const newInvalidData: { [key: string]: boolean } = {}
 
     data.forEach((row, rowIndex) => {
@@ -88,7 +85,11 @@ export function DataValidator({ data, columns, onInvalidData }: DataValidatorPro
 
     setInvalidData(newInvalidData)
     onInvalidData(newInvalidData)
-  }
+  }, [data, validationRules, onInvalidData])
+
+  useEffect(() => {
+    validateData()
+  }, [validateData])
 
   const addValidationRule = () => {
     if (newRule.column && newRule.type) {
@@ -148,13 +149,13 @@ export function DataValidator({ data, columns, onInvalidData }: DataValidatorPro
               <>
                 <Input
                   type="number"
-                  placeholder={intl.formatMessage({ id: "app.min" })}
+                  placeholder={intl.formatMessage({ id: "app.validationMin" })}
                   value={newRule.min || ""}
                   onChange={(e) => setNewRule({ ...newRule, min: Number(e.target.value) })}
                 />
                 <Input
                   type="number"
-                  placeholder={intl.formatMessage({ id: "app.max" })}
+                  placeholder={intl.formatMessage({ id: "app.validationMax" })}
                   value={newRule.max || ""}
                   onChange={(e) => setNewRule({ ...newRule, max: Number(e.target.value) })}
                 />

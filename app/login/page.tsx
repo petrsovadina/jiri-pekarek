@@ -34,7 +34,7 @@ export default function LoginPage() {
       })
 
       router.push("/")
-    } catch (error) {
+    } catch {
       toast({
         title: "Chyba při přihlášení",
         description: "Zkontrolujte své přihlašovací údaje a zkuste to znovu",
